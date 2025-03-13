@@ -2,13 +2,13 @@
 
 # dependencies
 node_modules/
-
+extractedCode/*
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
-
+codeExtractor.ps1
 # Native
 *.orig.*
 *.jks
