@@ -129,7 +129,7 @@ const SignUp = () => {
           </TouchableOpacity>
 
           <Link
-            href="/screens/login"
+            href="/(screens)/login"
             className="mt-3 text-blue-500 text-center"
           >
             Already have an account? Sign In
@@ -153,7 +153,7 @@ const SignUp = () => {
 
                 <TouchableOpacity
                   className="bg-green-500 mt-4 py-3 rounded-md"
-                  onPress={() => router.push("/screens/login")}
+                  onPress={() => router.push("(screens)/login")}
                 >
                   <Text className="text-white text-center font-bold">OK</Text>
                 </TouchableOpacity>

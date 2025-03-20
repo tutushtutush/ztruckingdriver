@@ -4,18 +4,9 @@ import "./globals.css";
 export default function RootLayout() {
   return (
     <Stack>
-      <Stack.Screen
-        name="/app/screens/index.tsx"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="/app/screens/login.tsx"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="/app/screens/signUp.tsx"
-        options={{ headerShown: false }}
-      />
+      <Stack.Screen name="(screens)" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(screens)/(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }

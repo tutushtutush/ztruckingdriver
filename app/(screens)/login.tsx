@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Link } from "expo-router";
-
+import { useRouter } from "expo-router";
 const Login = () => {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ username: "", password: "" });
@@ -28,7 +29,7 @@ const Login = () => {
   const handleLogin = () => {
     if (validateInputs()) {
       console.log("Login successful", username, password);
-      // login logic to be handles
+      router.push("./(tabs)/home");
     }
   };
 
@@ -70,7 +71,7 @@ const Login = () => {
 
           {/* Using Link for navigation */}
           <Link
-            href="/screens/signUp"
+            href="/(screens)/signUp"
             className="mt-3 text-blue-500 text-center"
           >
             Don't have an account? Sign Up
