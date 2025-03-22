@@ -70,12 +70,6 @@ const Login = () => {
           </TouchableOpacity>
 
           {/* Using Link for navigation */}
-          <Link
-            href="/(screens)/signUp"
-            className="mt-3 text-blue-500 text-center"
-          >
-            Don't have an account? Sign Up
-          </Link>
         </View>
       </View>
     </View>

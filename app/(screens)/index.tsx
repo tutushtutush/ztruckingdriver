@@ -6,7 +6,6 @@ export default function Index() {
     <View className="flex-1 items-center justify-center">
       <Text className="text-5xl text-primary font-bold">Ztrucking</Text>
       <Link href="login">Login</Link>
-      <Link href="signUp">SignUp</Link>
       <Link href="home">tabs</Link>
     </View>
   );
