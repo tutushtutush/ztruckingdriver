@@ -2,18 +2,23 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Link } from "expo-router";
 import { useRouter } from "expo-router";
+import { loginUser } from "@/services/loginService";
+
 const Login = () => {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({ username: "", password: "" });
+  const [errors, setErrors] = useState({ email: "", password: "" });
 
   const validateInputs = () => {
     let isValid = true;
-    let newErrors = { username: "", password: "" };
+    let newErrors = { email: "", password: "" };
 
-    if (!username.trim()) {
-      newErrors.username = "Username is required";
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Invalid email format";
       isValid = false;
     }
 
@@ -28,7 +33,7 @@ const Login = () => {
 
   const handleLogin = () => {
     if (validateInputs()) {
-      console.log("Login successful", username, password);
+      loginUser(email, password);
       router.push("./(tabs)/home");
     }
   };
@@ -39,15 +44,17 @@ const Login = () => {
         <Text className="text-2xl font-bold text-center mb-6">Login</Text>
 
         <View>
-          <Text className="text-gray-700 mb-1">Username</Text>
+          <Text className="text-gray-700 mb-1">Email</Text>
           <TextInput
             className="border border-gray-300 p-3 rounded-md w-full"
-            placeholder="Enter your username"
-            value={username}
-            onChangeText={setUsername}
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
-          {errors.username ? (
-            <Text className="text-red-500">{errors.username}</Text>
+          {errors.email ? (
+            <Text className="text-red-500">{errors.email}</Text>
           ) : null}
 
           <Text className="text-gray-700 mt-3 mb-1">Password</Text>
@@ -68,8 +75,6 @@ const Login = () => {
           >
             <Text className="text-white text-center font-bold">Login</Text>
           </TouchableOpacity>
-
-          {/* Using Link for navigation */}
         </View>
       </View>
     </View>
