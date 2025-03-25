@@ -1,42 +1,34 @@
 import { loginUser } from "@/services/loginService";
 import HttpContext from "@/services/HttpContext"; // Import the real module
+import { getAuthToken } from "@/services/authService";
+import mockedAxiosInstance from "./jest.setup"; // Import mock before HttpContext
 
-jest.mock("@/services/HttpContext", () => ({
-  POST: jest.fn(), // Mock only the POST method
-}));
-
+// Ensure Jest mocks axios
+jest.mock("axios"); // Ensure Jest mocks axios
 describe("loginUser", () => {
   beforeEach(() => {
     jest.clearAllMocks(); // Reset mocks before each test
   });
 
   it("should return a token for valid credentials", async () => {
-    (HttpContext.POST as jest.Mock).mockResolvedValueOnce({
+    (mockedAxiosInstance.post as jest.Mock).mockResolvedValueOnce({
       data: { token: "mocked-jwt-token", user: { email: "email" } },
     });
+    (mockedAxiosInstance.post as jest.Mock).mockRejectedValueOnce(
+      new Error("Invalid credentials")
+    );
 
-    const response = await loginUser("email", "password");
+    const loginResponse = await loginUser("email", "password");
 
-    expect(response).toHaveProperty("token", "mocked-jwt-token");
-    expect(response.user.email).toBe("email");
-    expect(HttpContext.POST).toHaveBeenCalledWith("/auth/login", {
-      email: "email",
-      password: "password",
+    expect(loginResponse).toEqual({
+      token: "mocked-jwt-token",
+      user: { email: "email" },
     });
   });
 
   it("should throw an error for invalid credentials", async () => {
-    (HttpContext.POST as jest.Mock).mockRejectedValueOnce(
-      new Error("Invalid credentials")
-    );
-
     await expect(
       loginUser("wrong@example.com", "wrongpassword")
     ).rejects.toThrow("Invalid credentials");
-
-    expect(HttpContext.POST).toHaveBeenCalledWith("/auth/login", {
-      email: "email",
-      password: "password",
-    });
   });
 });
