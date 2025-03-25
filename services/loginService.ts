@@ -14,7 +14,6 @@ export const loginUser = async (email: string, password: string) => {
       throw new Error("Invalid login response");
     }
   } catch (error) {
-    console.error("Login failed:", error);
     throw error;
   }
 };
