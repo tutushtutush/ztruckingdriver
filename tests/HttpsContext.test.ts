@@ -1,12 +1,12 @@
-import mockedAxiosInstance from "./jest.setup"; // Import mock before HttpContext
-import HttpContext from "../services/HttpContext"; // Now import the module
+import mockedAxiosInstance from "./jest.setup";
+import HttpContext from "../services/HttpContext";
 import axios from "axios";
 
-jest.mock("axios"); // Ensure Jest mocks axios
+jest.mock("axios");
 
 describe("HttpContext API Mocking", () => {
   beforeEach(() => {
-    jest.clearAllMocks(); // Reset mocks before each test
+    jest.clearAllMocks();
   });
 
   it("should return mocked user list when calling /users", async () => {
@@ -27,5 +27,9 @@ describe("HttpContext API Mocking", () => {
       email: "email",
       password: "password",
     });
+
+    await expect(
+      HttpContext.POST("wrong@example.com", "wrongpassword")
+    ).rejects.toThrow("Invalid credentials");
   });
 });
