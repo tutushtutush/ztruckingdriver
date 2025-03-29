@@ -1,1 +1,1 @@
-/// <reference types="nativewind/types" /> // This enables ts to recognize tailwind classes and prevent error messages
+/// <reference types="nativewind/types" />
