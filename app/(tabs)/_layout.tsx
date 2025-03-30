@@ -1,11 +1,17 @@
-import { View, Text, ImageBackground, Image } from 'react-native'
-import React from 'react'
-import { Tabs } from 'expo-router'
-import { images } from '@/constants/images'
-import { icons } from '@/constants/icons'
-import { ScreenStackHeaderCenterView } from 'react-native-screens'
+import { View, Text, ImageBackground, Image } from 'react-native';
+import React from 'react';
+import { Tabs, Redirect } from 'expo-router';
+import { images } from '@/constants/images';
+import { icons } from '@/constants/icons';
+import { useAuth } from '@/context/AuthContext';
 
 const TabIcon = ({ focused, icon, title }: any) => {
+    const { session } = useAuth();
+
+    console.log('session', session)
+        
+    if(!session) return <Redirect href="/signIn" />;
+
     if(focused) {
         return (
                 <ImageBackground
