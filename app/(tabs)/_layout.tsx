@@ -3,7 +3,7 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { images } from '@/constants/images';
 import { icons } from '@/constants/icons';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/authContext';
 
 const TabIcon = ({ focused, icon, title }: any) => {
     const { session } = useAuth();
