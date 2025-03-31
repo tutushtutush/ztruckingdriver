@@ -4,9 +4,9 @@ import { useAuth } from '@/context/authContext';
 import { Redirect } from 'expo-router';
 
 const SignIn = () => {
-    const { isTokenValid } = useAuth();
+    const { isTokenValid, user } = useAuth();
 
-    if(isTokenValid) <Redirect href={'/(tabs)'}/>;
+    if(isTokenValid && user) <Redirect href={'/(tabs)'}/>;
 
     return (
         <SafeAreaView>
