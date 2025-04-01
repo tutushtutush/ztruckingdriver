@@ -11,14 +11,14 @@ describe('AuthApiService', () => {
   let authApiService;
 
   beforeEach(() => {
-    authApiService = new AuthApiService(mockHttpClient);
+    authApiService = new AuthApiService(mockHttpClient, 'testBaseApiUrl');
     jest.clearAllMocks();
   });
 
   test('should return token on successful login', async () => {
     mockHttpClient.post.mockResolvedValue({ data: { token: 'test-token' } });
     const token = await authApiService.login({ username: 'user', password: 'pass' });
-    expect(mockHttpClient.post).toHaveBeenCalledWith('/auth/login', { username: 'user', password: 'pass' });
+    expect(mockHttpClient.post).toHaveBeenCalledWith('testBaseApiUrl/auth/login', { username: 'user', password: 'pass' });
     expect(token).toBe('test-token');
   });
 
@@ -30,7 +30,7 @@ describe('AuthApiService', () => {
   test('should validate token successfully', async () => {
     mockHttpClient.get.mockResolvedValue({ data: { valid: true } });
     const isValid = await authApiService.validateToken('test-token');
-    expect(mockHttpClient.get).toHaveBeenCalledWith('/auth/validate', {
+    expect(mockHttpClient.get).toHaveBeenCalledWith('testBaseApiUrl/auth/validate', {
       headers: { Authorization: 'Bearer test-token' },
     });
     expect(isValid).toBe(true);

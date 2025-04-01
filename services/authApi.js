@@ -1,12 +1,13 @@
 // authService.js
-export class AuthServiceService {
-    constructor(httpClient) {
+export class AuthApiService {
+    constructor(httpClient, baseApiUrl) {
       this.httpClient = httpClient;
+      this.baseApiUrl = baseApiUrl;
     }
   
     async login(credentials) {
       try {
-        const response = await this.httpClient.post('/auth/login', credentials);
+        const response = await this.httpClient.post(`${this.baseApiUrl}/auth/login`, credentials);
         return response.data.token;
       } catch (error) {
         console.error('Login failed:', error);
@@ -20,7 +21,7 @@ export class AuthServiceService {
       }
       
       try {
-        const response = await this.httpClient.get('/auth/validate', {
+        const response = await this.httpClient.get(`${this.baseApiUrl}/auth/validate`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         return response.data.valid;

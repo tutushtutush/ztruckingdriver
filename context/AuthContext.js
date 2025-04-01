@@ -1,8 +1,15 @@
 import { useContext, createContext, useState, useEffect } from "react";
-import { Text, SafeAreaView } from "react-native";
-import TextCustom from "../app/components/TextCustom";
+import { SafeAreaView } from "react-native";
+import TextCustom from "../app/components/textCustom";
+import { AuthApiService } from '../services/authApi';
+import { AuthTokenService } from '../services/authToken';
+import { HttpRequestClient } from '../clients/httpRequest';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthService } from '../services/auth';
+import axios from 'axios';
 
 const AuthContext = createContext();
+const authSvc = null;
 
 const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
@@ -13,14 +20,21 @@ const AuthProvider = ({ children }) => {
     }, []);
 
     const init = async () => {
+        const authApiSvc = new AuthApiService(new HttpRequestClient(axios), process.env.AUTH_API_BASE_URL);
+        const authtokenSvc = new AuthTokenService(AsyncStorage);
+        authSvc = new AuthService(authApiSvc, authtokenSvc);
         checkAuth();
     };
 
     const checkAuth = async () => {
         try {
-            // check if token is valid => token exist & is not expired
-                // if token is valid, check if user data exists. If not get user and set user
-            // if token not valid, set user to null (this should automatically redirect user to sign in page)
+            // is token valid?
+            if(isTokenValid()) setUser(null);
+
+            // get user
+            if(!user) {
+                // get user data using user service, set user
+            }
 
         } catch (error) {
            // set token to null, set user to null (this should automatially redirect user to sign in page)
@@ -32,8 +46,9 @@ const AuthProvider = ({ children }) => {
         setLoading(true);
         try {
             // sign in user, set token
+            authSvc.sinIn({ email, password });
             
-            // get user, set user
+            // get user, set user suing user svc
         } catch (error) {
             // set token to null, set user to null (this should automatially redirect user to sign in page)
         }
@@ -42,15 +57,14 @@ const AuthProvider = ({ children }) => {
     const signout = async () => {
         setLoading(true);
 
-        // delete token
-        // delete user data
-        // redirect user to sign in page
+        authSvc.singOut();
+        setUser(null);
         
         setLoading(false);
     };
 
     const isTokenValid = () => {
-        // check if token is valid
+        return authSvc.isTokenValid();
     };
 
     const contextData = { user, signin, signout, isTokenValid };
