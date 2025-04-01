@@ -1,5 +1,5 @@
 // authService.js
-export class AuthApiService {
+export class AuthApi {
     constructor(httpClient, baseApiUrl) {
       this.httpClient = httpClient;
       this.baseApiUrl = baseApiUrl;

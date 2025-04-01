@@ -1,7 +1,7 @@
 import { useContext, createContext, useState, useEffect } from "react";
 import { SafeAreaView } from "react-native";
 import TextCustom from "../app/components/textCustom";
-import { AuthApiService } from '../services/authApi';
+import { AuthApi } from '../api/auth';
 import { AuthTokenService } from '../services/authToken';
 import { HttpRequestClient } from '../clients/httpRequest';
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,9 +20,9 @@ const AuthProvider = ({ children }) => {
     }, []);
 
     const init = async () => {
-        const authApiSvc = new AuthApiService(new HttpRequestClient(axios), process.env.AUTH_API_BASE_URL);
+        const authApi = new AuthApi(new HttpRequestClient(axios), process.env.AUTH_API_BASE_URL);
         const authtokenSvc = new AuthTokenService(AsyncStorage);
-        authSvc = new AuthService(authApiSvc, authtokenSvc);
+        authSvc = new AuthService(authApi, authtokenSvc);
         checkAuth();
     };
 
