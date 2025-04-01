@@ -17,18 +17,18 @@ describe('AuthTokenService', () => {
   });
 
   it('should call setItem with correct parameters', async () => {
-    await authTokenService.setItem('userToken', 'abc123');
+    await authTokenService.setItem('abc123');
     expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('userToken', 'abc123');
   });
 
   it('should return correct value when getItem is called', async () => {
     mockAsyncStorage.getItem.mockResolvedValue('abc123');
-    const result = await authTokenService.getItem('userToken');
+    const result = await authTokenService.getItem();
     expect(result).toBe('abc123');
   });
 
   it('should call removeItem with correct parameters', async () => {
-    await authTokenService.removeItem('userToken');
+    await authTokenService.removeItem();
     expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('userToken');
   });
 });
