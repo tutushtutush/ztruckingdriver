@@ -1,6 +1,6 @@
 export class AuthService {
-    constructor(authApiSvc, authTokenSvc) {
-      this.authApiSvc = authApiSvc;
+    constructor(authApi, authTokenSvc) {
+      this.authApi = authApi;
       this.authTokenSvc = authTokenSvc;
     }
 
@@ -9,7 +9,7 @@ export class AuthService {
           const token = this.authTokenSvc.getItem();
           if(!token) return false;
 
-          return this.authApiSvc.validateToken(token);
+          return this.authApi.validateToken(token);
         } catch (error) {
           console.error('Error saving data to AsyncStorage', error);
           throw error;
@@ -18,7 +18,7 @@ export class AuthService {
 
     async signIn({email, password}) {
       try {
-        const token = await this.authApiSvc.login({ email, password });
+        const token = await this.authApi.login({ email, password });
         if(!token) return false;
 
         this.authTokenSvc.setItem(token);

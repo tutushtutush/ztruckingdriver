@@ -1,5 +1,5 @@
 // authService.test.js
-import { AuthApiService } from '../../services/authApi';
+import { AuthApi } from '../../api/auth';
 
 // Mock HTTP client
 const mockHttpClient = {
@@ -7,29 +7,29 @@ const mockHttpClient = {
   get: jest.fn(),
 };
 
-describe('AuthApiService', () => {
-  let authApiService;
+describe('AuthApi', () => {
+  let authApi;
 
   beforeEach(() => {
-    authApiService = new AuthApiService(mockHttpClient, 'testBaseApiUrl');
+    authApi = new AuthApi(mockHttpClient, 'testBaseApiUrl');
     jest.clearAllMocks();
   });
 
   test('should return token on successful login', async () => {
     mockHttpClient.post.mockResolvedValue({ data: { token: 'test-token' } });
-    const token = await authApiService.login({ username: 'user', password: 'pass' });
+    const token = await authApi.login({ username: 'user', password: 'pass' });
     expect(mockHttpClient.post).toHaveBeenCalledWith('testBaseApiUrl/auth/login', { username: 'user', password: 'pass' });
     expect(token).toBe('test-token');
   });
 
   test('should throw error on failed login', async () => {
     mockHttpClient.post.mockRejectedValue(new Error('Login failed'));
-    await expect(authApiService.login({ username: 'user', password: 'pass' })).rejects.toThrow('Login failed');
+    await expect(authApi.login({ username: 'user', password: 'pass' })).rejects.toThrow('Login failed');
   });
 
   test('should validate token successfully', async () => {
     mockHttpClient.get.mockResolvedValue({ data: { valid: true } });
-    const isValid = await authApiService.validateToken('test-token');
+    const isValid = await authApi.validateToken('test-token');
     expect(mockHttpClient.get).toHaveBeenCalledWith('testBaseApiUrl/auth/validate', {
       headers: { Authorization: 'Bearer test-token' },
     });
@@ -38,11 +38,11 @@ describe('AuthApiService', () => {
 
   test('should return false for invalid token', async () => {
     mockHttpClient.get.mockRejectedValue(new Error('Token validation failed'));
-    const isValid = await authApiService.validateToken('invalid-token');
+    const isValid = await authApi.validateToken('invalid-token');
     expect(isValid).toBe(false);
   });
 
   test('should throw error if no token is provided for validation', async () => {
-    await expect(authApiService.validateToken(null)).rejects.toThrow('No token provided');
+    await expect(authApi.validateToken(null)).rejects.toThrow('No token provided');
   });
 });
