@@ -9,7 +9,7 @@ export class AuthService {
           const token = this.authTokenSvc.getItem();
           if(!token) return false;
 
-          return this.authApi.validateToken(token);
+          return await this.authApi.validateToken(token);
         } catch (error) {
           console.error('Error saving data to AsyncStorage', error);
           throw error;
