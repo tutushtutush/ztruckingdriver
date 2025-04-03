@@ -3,14 +3,9 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { images } from '@/constants/images';
 import { icons } from '@/constants/icons';
-import { useAuth } from '@/context/authContext';
+import ProtectedRoutes from "../../context/protectedRoutes";
 
 const TabIcon = ({ focused, icon, title }: any) => {
-    const { session } = useAuth();
-
-    console.log('session', session)
-        
-    if(!session) return <Redirect href="/signIn" />;
 
     if(focused) {
         return (
@@ -34,6 +29,7 @@ const TabIcon = ({ focused, icon, title }: any) => {
 
 const _layout = () => {
   return (
+    <ProtectedRoutes>
     <Tabs
         screenOptions={{
             tabBarShowLabel:false,
@@ -81,13 +77,13 @@ const _layout = () => {
             }}
         />
         <Tabs.Screen 
-            name='saved'
+            name='location'
             options={{
-                title: 'Saved',
+                title: 'Location',
                 headerShown: false,
                 tabBarIcon: ({ focused }) => (
                     <>
-                        <TabIcon focused={focused} icon={icons.save} title='Saved' />
+                        <TabIcon focused={focused} icon={icons.location} title='Location' />
                     </>
                 )
             }}
@@ -105,6 +101,7 @@ const _layout = () => {
             }}
         />
     </Tabs>
+    </ProtectedRoutes>
   )
 }
 

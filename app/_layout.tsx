@@ -1,16 +1,22 @@
 import { Stack } from "expo-router";
 import './globals.css';
-import { AuthProvider } from '@/context/authContext';
+import { AppProviders } from '../context/app';
+import ProtectedRoutes from '../context/protectedRoutes';
 
 export default function RootLayout() {
-  return <AuthProvider>
-    <Stack>
-      <Stack.Screen 
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
-    </Stack>
-  </AuthProvider>
+  return (
+    <AppProviders>
+      <Stack>
+        {/* Public Screens (Accessible Without Authentication) */}
+        <Stack.Screen name="signIn" options={{ headerShown: false }} />
+        <Stack.Screen name="signUp" options={{ headerShown: false }} />
+
+        {/* Protected Screens (Wrap the entire (tabs) layout) */}
+        <Stack.Screen 
+          name="(tabs)"
+          options={{ headerShown: false }}
+        />
+      </Stack>
+    </AppProviders>
+  );
 }
