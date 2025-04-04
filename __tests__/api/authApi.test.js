@@ -1,4 +1,4 @@
-// authService.test.js
+// authApi.test.js
 import { AuthApi } from '../../api/auth';
 
 // Mock HTTP client
