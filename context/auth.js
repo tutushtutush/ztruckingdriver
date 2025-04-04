@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {AsyncStorageService} from '../services/asyncStorage';
-import {AuthService} from '../services/auth';
-import {AuthApi} from '../api/auth';
+import { AsyncStorageService } from '../services/asyncStorage';
+import { AuthService } from '../services/auth';
+import { AuthApi } from '../api/auth';
 import { HttpRequestClient } from '../clients/httpRequest';
 import axios from 'axios';
-import {UserService} from '../services/user';
-import {UserApi} from '../api/user';
+import { UserService } from '../services/user';
+import { UserApi } from '../api/user';
 
 const AuthContext = createContext();
 
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const httpClient = useMemo(() => new HttpRequestClient(axios), []); 
+  const httpClient = useMemo(() => new HttpRequestClient(axios), []);
   const authApi = useMemo(() => new AuthApi(httpClient, "process.env.BASE_API_URL"), []);
   const asyncStorageSvc = useMemo(() => new AsyncStorageService(AsyncStorage), []);
   const authSvc = useMemo(() => new AuthService(authApi, asyncStorageSvc), []);
