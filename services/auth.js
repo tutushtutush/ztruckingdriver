@@ -1,34 +1,66 @@
 export class AuthService {
-    constructor(authApi, authTokenSvc) {
-      this.authApi = authApi;
-      this.authTokenSvc = authTokenSvc;
+  constructor(authApi, asyncStorageSvc) {
+    this.authApi = authApi;
+    this.asyncStorageSvc = asyncStorageSvc;
+  }
+
+  // Get token from AsyncStorage
+  async getToken() {
+    try {
+      return await this.asyncStorageSvc.getItem('authToken');
+    } catch (error) {
+      console.error('Error getting token', error);
+      throw error;
     }
+  }
 
-    async isTokenValid() {
-        try {
-          const token = this.authTokenSvc.getItem();
-          if(!token) return false;
+  // Validate the token (No decoding here, just validate using the backend)
+  async isTokenValid() {
+    try {
+      const token = await this.getToken();
+      if (!token) return false;
 
-          return await this.authApi.validateToken(token);
-        } catch (error) {
-          console.error('Error saving data to AsyncStorage', error);
-          throw error;
-        }
+      return await this.authApi.validateToken(token); // Assumes backend will validate
+    } catch (error) {
+      console.error('Error validating token', error);
+      return false;
     }
+  }
 
-    async signIn({email, password}) {
-      try {
-        const token = await this.authApi.login({ email, password });
-        if(!token) return false;
+  // Sign in method to save token in AsyncStorage
+  async signIn({ profileEmail, profilePassword }) {
+    try {
+      const { token, userData } = await this.authApi.login({ profileEmail, profilePassword });
+      if (!token || !userData) return false;
 
-        this.authTokenSvc.setItem(token);
-      } catch (error) {
-        console.error('Error saving data to AsyncStorage', error);
-        throw error;
-      }
+      // Store both token and user data in AsyncStorage
+      await this.asyncStorageSvc.setItem('authToken', token);
+      await this.asyncStorageSvc.setItem('user', userData);
+
+      return true;
+    } catch (error) {
+      console.error('Error during sign-in', error);
+      throw error;
     }
+  }
 
-    singOut() {
-        this.authTokenSvc.removeItem();
+  // Sign out method to remove token from AsyncStorage
+  async signOut() {
+    try {
+      await this.asyncStorageSvc.removeItem('authToken');
+      await this.asyncStorageSvc.removeItem('user');
+    } catch (error) {
+      console.error('Error during sign-out', error);
     }
+  }
+
+  // Clear all data from AsyncStorage
+  async clearAllStorage() {
+    try {
+      await this.asyncStorageSvc.clearAllStorage(); // Using the method from AsyncStorageService
+      console.log('AsyncStorage cleared successfully!');
+    } catch (error) {
+      console.error('Error clearing AsyncStorage:', error);
+    }
+  }
 }

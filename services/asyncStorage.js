@@ -1,4 +1,4 @@
-class AsyncStorageService {
+export class AsyncStorageService {
   constructor(asyncStorage) {
       if (!asyncStorage || typeof asyncStorage.setItem !== 'function' || 
           typeof asyncStorage.getItem !== 'function' || 
@@ -36,6 +36,14 @@ class AsyncStorageService {
           throw error;
       }
   }
-}
 
-module.exports = AsyncStorageService;
+   async clearAllStorage() {
+    try {
+      await this.asyncStorage.clear();
+      console.log('AsyncStorage cleared successfully!');
+    } catch (error) {
+      console.error('Error clearing AsyncStorage:', error);
+      throw error;
+    }
+  };
+}
