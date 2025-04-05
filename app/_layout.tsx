@@ -9,7 +9,6 @@ export default function RootLayout() {
       <Stack>
         {/* Public Screens (Accessible Without Authentication) */}
         <Stack.Screen name="signIn" options={{ headerShown: false }} />
-        <Stack.Screen name="signUp" options={{ headerShown: false }} />
 
         {/* Protected Screens (Wrap the entire (tabs) layout) */}
         <Stack.Screen 

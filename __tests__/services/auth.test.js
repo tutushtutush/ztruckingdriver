@@ -83,8 +83,8 @@ describe('AuthService', () => {
 
     // Assert
     expect(result).toBe(true);
-    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('authToken', token);
-    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('user', userData);
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('authToken', JSON.stringify(token));
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('user', JSON.stringify(userData));
   });
 
   test('should sign out and remove token and user data from AsyncStorage', async () => {

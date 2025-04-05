@@ -34,8 +34,8 @@ export class AuthService {
       if (!token || !userData) return false;
 
       // Store both token and user data in AsyncStorage
-      await this.asyncStorageSvc.setItem('authToken', token);
-      await this.asyncStorageSvc.setItem('user', userData);
+      await this.asyncStorageSvc.setItem('authToken', JSON.stringify(token));
+      await this.asyncStorageSvc.setItem('user', JSON.stringify(userData));
 
       return true;
     } catch (error) {
