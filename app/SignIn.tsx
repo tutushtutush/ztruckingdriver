@@ -27,8 +27,9 @@ const SignIn = () => {
      setLoading(false);
      if(!success) {
       setError('something went wrong, please try again!');
-     }
-     //router.push('/(tabs)');
+     } 
+     
+    router.push('/(tabs)');
   };
 
   return (

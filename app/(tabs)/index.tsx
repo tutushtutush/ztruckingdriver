@@ -1,11 +1,17 @@
 import { Link } from "expo-router";
-import { Text, View, Image, ScrollView } from "react-native";
+import { Text, View, Image, ScrollView, Button } from "react-native";
 import { images } from "@/constants/images"
 import { icons } from "@/constants/icons";
 import { useRouter } from "expo-router";
+import { useAuth } from '../../context/auth';
 
 export default function Index() {
   const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    logout();
+  };
 
   return (
     <View className="flex-1 bg-primary">
@@ -17,6 +23,10 @@ export default function Index() {
         <Image source={icons.logo} className="w-12 h-10 mt-20 mb-5 mx-auto"/>
 
         <View className="flex-1 mt-5">
+          <Button
+                    title={'Log out'}
+                    onPress={handleLogout}
+                  />
         </View>
       </ScrollView>
     </View>
