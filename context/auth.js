@@ -7,6 +7,7 @@ import { HttpRequestClient } from '../clients/httpRequest';
 import axios from 'axios';
 import { UserService } from '../services/user';
 import { UserApi } from '../api/user';
+import { BASE_API_URL } from '../util/const';
 
 const AuthContext = createContext();
 
@@ -16,70 +17,78 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const httpClient = useMemo(() => new HttpRequestClient(axios), []);
-  const authApi = useMemo(() => new AuthApi(httpClient, "process.env.BASE_API_URL"), []);
+  const authApi = useMemo(() => new AuthApi(httpClient, BASE_API_URL), []);
   const asyncStorageSvc = useMemo(() => new AsyncStorageService(AsyncStorage), []);
   const authSvc = useMemo(() => new AuthService(authApi, asyncStorageSvc), []);
-  const userApi = useMemo(() => new UserApi(httpClient, "process.env.BASE_API_URL"), []);
+  const userApi = useMemo(() => new UserApi(httpClient, BASE_API_URL), []);
   const userSvc = useMemo(() => new UserService(userApi, asyncStorageSvc), []);
 
   // Load and validate auth state from AsyncStorage
   useEffect(() => {
     const loadAuthData = async () => {
       setLoading(false);
-      // try {
-      //   const storedToken = await authSvc.getToken();
-      //   if (!storedToken) {
-      //     setLoading(false);
-      //     return;
-      //   }
+      try {
+        const storedToken = await authSvc.getToken();
+        if (!storedToken) {
+          setLoading(false);
+          return;
+        }
 
-      //   const isValid = await authSvc.isTokenValid();
-      //   if (!isValid) {
-      //     await authSvc.clearAllStorage();
-      //     setLoading(false);
-      //     return;
-      //   }
+        const isValid = await authSvc.isTokenValid();
+        if (!isValid) {
+          await authSvc.clearAllStorage();
+          setLoading(false);
+          return;
+        }
 
-      //   let userId;
-      //   try {
-      //     userId = authSvc.getUserIdFromToken(storedToken);
-      //   } catch (error) {
-      //     console.error('Invalid token:', error);
-      //     await authSvc.clearAllStorage();
-      //     setLoading(false);
-      //     return;
-      //   }
+        let userId;
+        try {
+          userId = authSvc.getUserIdFromToken(storedToken);
+        } catch (error) {
+          console.error('Invalid token:', error);
+          await authSvc.clearAllStorage();
+          setLoading(false);
+          return;
+        }
 
-      //   if (!userId) {
-      //     console.error('User ID not found in token');
-      //     await authSvc.clearAllStorage();
-      //     setLoading(false);
-      //     return;
-      //   }
+        if (!userId) {
+          console.error('User ID not found in token');
+          await authSvc.clearAllStorage();
+          setLoading(false);
+          return;
+        }
 
-      //   const storedUser = await userSvc.getUser(userId);
-      //   if (storedUser) {
-      //     setToken(storedToken);
-      //     setUser(storedUser);
-      //   } else {
-      //     console.error('User not found');
-      //     await authSvc.clearAllStorage();
-      //   }
-      // } catch (error) {
-      //   console.error('Error loading auth data:', error);
-      // } finally {
-      //   setLoading(false);
-      // }
+        const storedUser = await userSvc.getUser(userId);
+        if (storedUser) {
+          setToken(storedToken);
+          setUser(storedUser);
+        } else {
+          console.error('User not found');
+          await authSvc.clearAllStorage();
+        }
+      } catch (error) {
+        console.error('Error loading auth data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadAuthData();
   }, []);
 
-  const login = async (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
-    //await asyncStorageSvc.setItem('user', JSON.stringify(userData));
-    //await asyncStorageSvc.setItem('authToken', authToken);
+  const login = async ({ profileEmail, profilePassword }) => {
+    try {
+      const { token, user } = await authSvc.signIn({ profileEmail, profilePassword });
+
+      setToken(token);
+      setUser(user);
+      return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      setToken(null);
+      setUser(null);
+      return false;
+    }
   };
 
   const logout = async () => {

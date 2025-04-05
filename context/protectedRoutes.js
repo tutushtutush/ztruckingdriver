@@ -8,7 +8,6 @@ const ProtectedRoutes = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('protected routes', token)
     if (!loading && !token) {
       router.replace('/signIn'); // Ensures navigation happens outside render
     }

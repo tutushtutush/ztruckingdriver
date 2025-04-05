@@ -1,5 +1,3 @@
-import jwt_decode from 'jwt-decode'; // Import jwt-decode
-
 export class AuthService {
   constructor(authApi, asyncStorageSvc) {
     this.authApi = authApi;
@@ -16,37 +14,29 @@ export class AuthService {
     }
   }
 
-  // Validate the token
+  // Validate the token (No decoding here, just validate using the backend)
   async isTokenValid() {
     try {
       const token = await this.getToken();
       if (!token) return false;
 
-      return await this.authApi.validateToken(token);
+      return await this.authApi.validateToken(token); // Assumes backend will validate
     } catch (error) {
       console.error('Error validating token', error);
       return false;
     }
   }
 
-  // Decode the token and get the user ID
-  getUserIdFromToken(token) {
-    try {
-      const decoded = jwt_decode(token);
-      return decoded.userId; // Adjust according to your token structure
-    } catch (error) {
-      console.error('Error decoding token', error);
-      throw new Error('Invalid token');
-    }
-  }
-
   // Sign in method to save token in AsyncStorage
-  async signIn({ email, password }) {
+  async signIn({ profileEmail, profilePassword }) {
     try {
-      const token = await this.authApi.login({ email, password });
-      if (!token) return false;
+      const { token, userData } = await this.authApi.login({ profileEmail, profilePassword });
+      if (!token || !userData) return false;
 
+      // Store both token and user data in AsyncStorage
       await this.asyncStorageSvc.setItem('authToken', token);
+      await this.asyncStorageSvc.setItem('user', userData);
+
       return true;
     } catch (error) {
       console.error('Error during sign-in', error);
@@ -58,11 +48,13 @@ export class AuthService {
   async signOut() {
     try {
       await this.asyncStorageSvc.removeItem('authToken');
+      await this.asyncStorageSvc.removeItem('user');
     } catch (error) {
       console.error('Error during sign-out', error);
     }
   }
 
+  // Clear all data from AsyncStorage
   async clearAllStorage() {
     try {
       await this.asyncStorageSvc.clearAllStorage(); // Using the method from AsyncStorageService

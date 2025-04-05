@@ -14,20 +14,21 @@ const SignIn = () => {
 
   // Simulated API login request
   const handleLogin = async () => {
-    console.log('handleLogin')
     if (!username.trim() || !password.trim()) {
       setError('Username and password are required');
       return;
     }
 
-    // setLoading(true);
-    // setError('');
-    // const fakeToken = 'abc123xyz'; // Simulated auth token from API
-    // const userData = { name: username };
+     setLoading(true);
+     setError('');
+     const authData = { profileEmail: username.trim(), profilePassword: password };
 
-    // await login(userData, fakeToken);
-    // setLoading(false);
-    // router.push('/(tabs)');
+     const success = await login(authData);
+     setLoading(false);
+     if(!success) {
+      setError('something went wrong, please try again!');
+     }
+     //router.push('/(tabs)');
   };
 
   return (

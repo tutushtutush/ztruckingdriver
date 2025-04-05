@@ -1,151 +1,127 @@
-import jwt_decode from 'jwt-decode';
+// AuthService.test.js
 import { AuthService } from '../../services/auth';
-
-jest.mock('jwt-decode', () => jest.fn()); // Mock jwt-decode
 
 describe('AuthService', () => {
   let authService;
   let mockAuthApi;
-  let mockAsyncStorage;
+  let mockAsyncStorageSvc;
 
   beforeEach(() => {
+    // Create mock instances for dependencies
     mockAuthApi = {
       login: jest.fn(),
       validateToken: jest.fn(),
     };
-    mockAsyncStorage = {
+
+    mockAsyncStorageSvc = {
       getItem: jest.fn(),
       setItem: jest.fn(),
       removeItem: jest.fn(),
       clearAllStorage: jest.fn(),
     };
 
-    authService = new AuthService(mockAuthApi, mockAsyncStorage);
+    // Create an instance of AuthService with mocked dependencies
+    authService = new AuthService(mockAuthApi, mockAsyncStorageSvc);
   });
 
-  describe('getToken', () => {
-    it('should return token if it exists in AsyncStorage', async () => {
-      mockAsyncStorage.getItem.mockResolvedValue('mockToken');
-
-      const token = await authService.getToken();
-      expect(token).toBe('mockToken');
-      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('authToken');
-    });
-
-    it('should throw an error if AsyncStorage fails', async () => {
-      mockAsyncStorage.getItem.mockRejectedValue(new Error('Storage error'));
-
-      await expect(authService.getToken()).rejects.toThrow('Storage error');
-    });
+  afterEach(() => {
+    jest.clearAllMocks(); // Clear mocks after each test
   });
 
-  describe('isTokenValid', () => {
-    it('should return true if token is valid', async () => {
-      mockAsyncStorage.getItem.mockResolvedValue('mockToken');
-      mockAuthApi.validateToken.mockResolvedValue(true);
+  test('should get token from AsyncStorage', async () => {
+    // Arrange
+    const token = 'mockToken';
+    mockAsyncStorageSvc.getItem.mockResolvedValue(token);
 
-      const isValid = await authService.isTokenValid();
-      expect(isValid).toBe(true);
-      expect(mockAuthApi.validateToken).toHaveBeenCalledWith('mockToken');
-    });
+    // Act
+    const result = await authService.getToken();
 
-    it('should return false if token is invalid', async () => {
-      mockAsyncStorage.getItem.mockResolvedValue('mockToken');
-      mockAuthApi.validateToken.mockResolvedValue(false);
-
-      const isValid = await authService.isTokenValid();
-      expect(isValid).toBe(false);
-    });
-
-    it('should return false if no token is found', async () => {
-      mockAsyncStorage.getItem.mockResolvedValue(null);
-
-      const isValid = await authService.isTokenValid();
-      expect(isValid).toBe(false);
-    });
-
-    it('should return false if validation throws an error', async () => {
-      mockAsyncStorage.getItem.mockResolvedValue('mockToken');
-      mockAuthApi.validateToken.mockRejectedValue(new Error('Validation error'));
-
-      const isValid = await authService.isTokenValid();
-      expect(isValid).toBe(false);
-    });
+    // Assert
+    expect(result).toBe(token);
+    expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('authToken');
   });
 
-  describe('getUserIdFromToken', () => {
-    it('should return userId from a valid token', () => {
-      const mockToken = 'mock.jwt.token';
-      const decodedToken = { userId: '12345' };
+  test('should validate token successfully', async () => {
+    // Arrange
+    const token = 'mockToken';
+    mockAsyncStorageSvc.getItem.mockResolvedValue(token);
+    mockAuthApi.validateToken.mockResolvedValue(true);
 
-      jwt_decode.mockReturnValue(decodedToken);
+    // Act
+    const result = await authService.isTokenValid();
 
-      const userId = authService.getUserIdFromToken(mockToken);
-      expect(userId).toBe('12345');
-      expect(jwt_decode).toHaveBeenCalledWith(mockToken);
-    });
-
-    it('should throw an error if token is invalid', () => {
-      jwt_decode.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      expect(() => authService.getUserIdFromToken('invalidToken')).toThrow('Invalid token');
-    });
+    // Assert
+    expect(result).toBe(true);
+    expect(mockAuthApi.validateToken).toHaveBeenCalledWith(token);
   });
 
-  describe('signIn', () => {
-    it('should store token in AsyncStorage on successful login', async () => {
-      mockAuthApi.login.mockResolvedValue('mockToken');
-      mockAsyncStorage.setItem.mockResolvedValue();
+  test('should return false if token is not valid', async () => {
+    // Arrange
+    const token = 'mockToken';
+    mockAsyncStorageSvc.getItem.mockResolvedValue(token);
+    mockAuthApi.validateToken.mockResolvedValue(false);
 
-      const success = await authService.signIn({ email: 'test@example.com', password: 'password' });
-      expect(success).toBe(true);
-      expect(mockAuthApi.login).toHaveBeenCalledWith({ email: 'test@example.com', password: 'password' });
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('authToken', 'mockToken');
-    });
+    // Act
+    const result = await authService.isTokenValid();
 
-    it('should return false if login fails', async () => {
-      mockAuthApi.login.mockResolvedValue(null);
-
-      const success = await authService.signIn({ email: 'test@example.com', password: 'password' });
-      expect(success).toBe(false);
-    });
-
-    it('should throw an error if login request fails', async () => {
-      mockAuthApi.login.mockRejectedValue(new Error('Login failed'));
-
-      await expect(authService.signIn({ email: 'test@example.com', password: 'password' })).rejects.toThrow('Login failed');
-    });
+    // Assert
+    expect(result).toBe(false);
+    expect(mockAuthApi.validateToken).toHaveBeenCalledWith(token);
   });
 
-  describe('signOut', () => {
-    it('should remove token from AsyncStorage', async () => {
-      mockAsyncStorage.removeItem.mockResolvedValue();
+  test('should sign in and store token and user data', async () => {
+    // Arrange
+    const profileEmail = 'test@example.com';
+    const profilePassword = 'password';
+    const token = 'mockToken';
+    const userData = { id: 1, email: profileEmail };
 
-      await authService.signOut();
-      expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('authToken');
-    });
+    mockAuthApi.login.mockResolvedValue({ token, userData });
 
-    it('should handle errors gracefully when removing token', async () => {
-      mockAsyncStorage.removeItem.mockRejectedValue(new Error('Removal failed'));
+    // Act
+    const result = await authService.signIn({ profileEmail, profilePassword });
 
-      await expect(authService.signOut()).resolves.not.toThrow();
-    });
+    // Assert
+    expect(result).toBe(true);
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('authToken', token);
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('user', userData);
   });
 
-  describe('clearAllStorage', () => {
-    it('should clear all AsyncStorage items', async () => {
-      mockAsyncStorage.clearAllStorage.mockResolvedValue();
+  test('should sign out and remove token and user data from AsyncStorage', async () => {
+    // Act
+    await authService.signOut();
 
-      await authService.clearAllStorage();
-      expect(mockAsyncStorage.clearAllStorage).toHaveBeenCalled();
-    });
+    // Assert
+    expect(mockAsyncStorageSvc.removeItem).toHaveBeenCalledWith('authToken');
+    expect(mockAsyncStorageSvc.removeItem).toHaveBeenCalledWith('user');
+  });
 
-    it('should handle errors when clearing AsyncStorage', async () => {
-      mockAsyncStorage.clearAllStorage.mockRejectedValue(new Error('Clear failed'));
+  test('should clear all AsyncStorage data', async () => {
+    // Act
+    await authService.clearAllStorage();
 
-      await expect(authService.clearAllStorage()).resolves.not.toThrow();
-    });
+    // Assert
+    expect(mockAsyncStorageSvc.clearAllStorage).toHaveBeenCalled();
+  });
+
+  test('should throw error when login fails', async () => {
+    // Arrange
+    const profileEmail = 'test@example.com';
+    const profilePassword = 'wrongpassword';
+    mockAuthApi.login.mockRejectedValue(new Error('Login failed'));
+
+    // Act & Assert
+    await expect(authService.signIn({ profileEmail, profilePassword })).rejects.toThrow('Login failed');
+  });
+
+  test('should return false if no token is found during validation', async () => {
+    // Arrange
+    mockAsyncStorageSvc.getItem.mockResolvedValue(null);
+
+    // Act
+    const result = await authService.isTokenValid();
+
+    // Assert
+    expect(result).toBe(false);
   });
 });

@@ -14,6 +14,7 @@ export class HttpRequestClient {
 
   async post(url, data, config = {}) {
     try {
+      console.log('httpclient post', url, data, config)
       return await this.httpLibrary.post(url, data, config);
     } catch (error) {
       this.handleError(error);

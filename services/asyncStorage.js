@@ -43,6 +43,7 @@ export class AsyncStorageService {
       console.log('AsyncStorage cleared successfully!');
     } catch (error) {
       console.error('Error clearing AsyncStorage:', error);
+      throw error;
     }
   };
 }
