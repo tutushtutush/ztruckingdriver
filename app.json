@@ -33,6 +33,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ZTrucking to use your location.",
+          "locationWhenInUsePermission": "Allow ZTrucking to use your location while the app is in use."
+        }
       ]
     ],
     "experiments": {
