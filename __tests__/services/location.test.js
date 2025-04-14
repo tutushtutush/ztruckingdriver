@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { LocationService } from '../../services/locationService';
+import { LocationService } from '../../services/location';
 import { LocationApi } from '../../api/location';
 import { AuthService } from '../../services/auth';
 
@@ -30,7 +30,7 @@ jest.mock('../../services/auth', () => ({
 }));
 
 describe('LocationService', () => {
-  let locationService;
+  let location;
   let mockLocationApi;
   let mockAuthService;
 
@@ -43,14 +43,14 @@ describe('LocationService', () => {
     mockAuthService = new AuthService();
     
     // Create a new LocationService instance for each test
-    locationService = new LocationService(mockLocationApi, mockAuthService);
+    location = new LocationService(mockLocationApi, mockAuthService);
   });
 
   describe('requestPermissions', () => {
     it('should return true when permissions are granted', async () => {
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
       
-      const result = await locationService.requestPermissions();
+      const result = await location.requestPermissions();
       
       expect(result).toBe(true);
       expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
@@ -59,7 +59,7 @@ describe('LocationService', () => {
     it('should return false when permissions are denied', async () => {
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
       
-      const result = await locationService.requestPermissions();
+      const result = await location.requestPermissions();
       
       expect(result).toBe(false);
       expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
@@ -79,7 +79,7 @@ describe('LocationService', () => {
     it('should throw error when permissions are denied', async () => {
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
       
-      await expect(locationService.startTracking(mockCallback))
+      await expect(location.startTracking(mockCallback))
         .rejects
         .toThrow('Location permission not granted');
       
@@ -90,7 +90,7 @@ describe('LocationService', () => {
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
       Location.watchPositionAsync.mockResolvedValue({ remove: jest.fn() });
       
-      await locationService.startTracking(mockCallback);
+      await location.startTracking(mockCallback);
       
       expect(Location.watchPositionAsync).toHaveBeenCalledWith(
         {
@@ -118,7 +118,7 @@ describe('LocationService', () => {
         return Promise.resolve({ remove: jest.fn() });
       });
 
-      await locationService.startTracking(mockCallback);
+      await location.startTracking(mockCallback);
 
       expect(mockCallback).toHaveBeenCalledWith({
         latitude: mockLocation.coords.latitude,
@@ -150,7 +150,7 @@ describe('LocationService', () => {
         return Promise.resolve({ remove: jest.fn() });
       });
 
-      await locationService.startTracking(mockCallback);
+      await location.startTracking(mockCallback);
 
       expect(mockCallback).toHaveBeenCalledWith({
         latitude: mockLocation.coords.latitude,
@@ -185,7 +185,7 @@ describe('LocationService', () => {
       });
 
       // Should not throw error
-      await expect(locationService.startTracking(mockCallback)).resolves.not.toThrow();
+      await expect(location.startTracking(mockCallback)).resolves.not.toThrow();
       
       // Callback should still be called
       expect(mockCallback).toHaveBeenCalled();
@@ -194,21 +194,21 @@ describe('LocationService', () => {
 
   describe('stopTracking', () => {
     it('should not call removeWatchAsync when no tracking is active', async () => {
-      await locationService.stopTracking();
+      await location.stopTracking();
       
       expect(Location.removeWatchAsync).not.toHaveBeenCalled();
     });
 
     it('should stop tracking when tracking is active', async () => {
       // Set up an active tracking session
-      locationService.watchId = 123;
-      locationService.locationCallback = jest.fn();
+      location.watchId = 123;
+      location.locationCallback = jest.fn();
 
-      await locationService.stopTracking();
+      await location.stopTracking();
       
       expect(Location.removeWatchAsync).toHaveBeenCalledWith(123);
-      expect(locationService.watchId).toBeNull();
-      expect(locationService.locationCallback).toBeNull();
+      expect(location.watchId).toBeNull();
+      expect(location.locationCallback).toBeNull();
     });
   });
 
@@ -216,7 +216,7 @@ describe('LocationService', () => {
     it('should return empty array when no auth token is available', async () => {
       mockAuthService.getToken.mockReturnValue(null);
       
-      const result = await locationService.getLocationHistory();
+      const result = await location.getLocationHistory();
       
       expect(result).toEqual([]);
       expect(mockLocationApi.getLocationHistory).not.toHaveBeenCalled();
@@ -230,7 +230,7 @@ describe('LocationService', () => {
       mockAuthService.getToken.mockReturnValue('test-token');
       mockLocationApi.getLocationHistory.mockResolvedValue(mockHistory);
       
-      const result = await locationService.getLocationHistory();
+      const result = await location.getLocationHistory();
       
       expect(result).toEqual(mockHistory);
       expect(mockLocationApi.getLocationHistory).toHaveBeenCalledWith('test-token');
@@ -240,7 +240,7 @@ describe('LocationService', () => {
       mockAuthService.getToken.mockReturnValue('test-token');
       mockLocationApi.getLocationHistory.mockRejectedValue(new Error('API Error'));
       
-      await expect(locationService.getLocationHistory()).rejects.toThrow('API Error');
+      await expect(location.getLocationHistory()).rejects.toThrow('API Error');
     });
   });
 }); 

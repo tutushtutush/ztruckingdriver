@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { LocationService } from '../services/locationService';
+import { LocationService } from '../services/location';
 import { LocationApi } from '../api/location';
 import { AuthService } from '../services/auth';
 import axios from 'axios';

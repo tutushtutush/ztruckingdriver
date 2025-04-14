@@ -1,73 +1,123 @@
-// asyncStorageService.test.js
-const AsyncStorageService = require('../../services/asyncStorage');
+import { AsyncStorageService } from '../../services/asyncStorage';
 
 describe('AsyncStorageService', () => {
-  let mockAsyncStorage;
   let asyncStorageService;
+  let mockAsyncStorage;
 
   beforeEach(() => {
-    // Mock AsyncStorage methods
+    // Mock the AsyncStorage methods
     mockAsyncStorage = {
       setItem: jest.fn(),
       getItem: jest.fn(),
       removeItem: jest.fn(),
+      clear: jest.fn(),
     };
 
+    // Create an instance of AsyncStorageService with mocked AsyncStorage
     asyncStorageService = new AsyncStorageService(mockAsyncStorage);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.clearAllMocks(); // Clear mocks after each test
   });
 
-  test('should store an item in AsyncStorage', async () => {
-    await asyncStorageService.setItem('key1', { test: 'data' });
+  test('should store data using setItem', async () => {
+    // Arrange
+    const key = 'authToken';
+    const value = { token: 'mockToken' };
 
-    expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-      'key1',
-      JSON.stringify({ test: 'data' })
-    );
+    // Act
+    await asyncStorageService.setItem(key, value);
+
+    // Assert
+    expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(key, JSON.stringify(value));
   });
 
-  test('should retrieve an item from AsyncStorage', async () => {
-    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify({ test: 'data' }));
+  test('should fetch data using getItem', async () => {
+    // Arrange
+    const key = 'authToken';
+    const value = { token: 'mockToken' };
+    mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(value));
 
-    const result = await asyncStorageService.getItem('key1');
+    // Act
+    const result = await asyncStorageService.getItem(key);
 
-    expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('key1');
-    expect(result).toEqual({ test: 'data' });
+    // Assert
+    expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(key);
+    expect(result).toEqual(value);
   });
 
-  test('should return null if getItem returns null', async () => {
+  test('should return null if no data found in getItem', async () => {
+    // Arrange
+    const key = 'authToken';
     mockAsyncStorage.getItem.mockResolvedValue(null);
 
-    const result = await asyncStorageService.getItem('key1');
+    // Act
+    const result = await asyncStorageService.getItem(key);
 
-    expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('key1');
+    // Assert
+    expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(key);
     expect(result).toBeNull();
   });
 
-  test('should remove an item from AsyncStorage', async () => {
-    await asyncStorageService.removeItem('key1');
+  test('should remove data using removeItem', async () => {
+    // Arrange
+    const key = 'authToken';
 
-    expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('key1');
+    // Act
+    await asyncStorageService.removeItem(key);
+
+    // Assert
+    expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(key);
   });
 
-  test('should throw an error if setItem fails', async () => {
-    mockAsyncStorage.setItem.mockRejectedValue(new Error('Storage error'));
+  test('should clear all data using clearAllStorage', async () => {
+    // Act
+    await asyncStorageService.clearAllStorage();
 
-    await expect(asyncStorageService.setItem('key1', { test: 'data' })).rejects.toThrow('Storage error');
+    // Assert
+    expect(mockAsyncStorage.clear).toHaveBeenCalled();
   });
 
-  test('should throw an error if getItem fails', async () => {
-    mockAsyncStorage.getItem.mockRejectedValue(new Error('Retrieval error'));
+  test('should throw error if setItem fails', async () => {
+    // Arrange
+    const key = 'authToken';
+    const value = { token: 'mockToken' };
+    mockAsyncStorage.setItem.mockRejectedValue(new Error('Failed to save'));
 
-    await expect(asyncStorageService.getItem('key1')).rejects.toThrow('Retrieval error');
+    // Act & Assert
+    await expect(asyncStorageService.setItem(key, value)).rejects.toThrow('Failed to save');
   });
 
-  test('should throw an error if removeItem fails', async () => {
-    mockAsyncStorage.removeItem.mockRejectedValue(new Error('Remove error'));
+  test('should throw error if getItem fails', async () => {
+    // Arrange
+    const key = 'authToken';
+    mockAsyncStorage.getItem.mockRejectedValue(new Error('Failed to fetch'));
 
-    await expect(asyncStorageService.removeItem('key1')).rejects.toThrow('Remove error');
+    // Act & Assert
+    await expect(asyncStorageService.getItem(key)).rejects.toThrow('Failed to fetch');
+  });
+
+  test('should throw error if removeItem fails', async () => {
+    // Arrange
+    const key = 'authToken';
+    mockAsyncStorage.removeItem.mockRejectedValue(new Error('Failed to remove'));
+
+    // Act & Assert
+    await expect(asyncStorageService.removeItem(key)).rejects.toThrow('Failed to remove');
+  });
+
+  test('should throw error if clearAllStorage fails', async () => {
+    // Arrange
+    mockAsyncStorage.clear.mockRejectedValue(new Error('Failed to clear'));
+  
+    // Act & Assert
+    await expect(asyncStorageService.clearAllStorage()).rejects.toThrow('Failed to clear');
+  });
+  
+
+  test('should throw error if AsyncStorage instance is invalid', () => {
+    // Act & Assert
+    expect(() => new AsyncStorageService(null)).toThrow('Invalid asyncStorage instance provided.');
   });
 });
