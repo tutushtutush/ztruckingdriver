@@ -69,6 +69,13 @@ const Profile = () => {
           </View>
 
           <View className="flex-row items-center mb-3">
+            <FontAwesome name="id-card" size={20} color="#A8B5DB" />
+            <Text className="text-light-200 text-lg ml-3">
+              {user?.driverInfo?.driver?.id || 'ID not set'}
+            </Text>
+          </View>
+
+          <View className="flex-row items-center mb-3">
             <FontAwesome name="envelope" size={20} color="#A8B5DB" />
             <Text className="text-light-200 text-lg ml-3">
               {user?.driverInfo?.contact?.email || 'Email not set'}

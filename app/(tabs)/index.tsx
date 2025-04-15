@@ -121,7 +121,7 @@ export default function Index() {
             </View>
             <View className="flex-row items-center">
               <FontAwesome name="id-card" size={20} color="#A8B5DB" />
-              <Text className="text-light-200 ml-3">ID: {user?.driverInfo?.driver?.driverId || 'N/A'}</Text>
+              <Text className="text-light-200 ml-3">ID: {user?.driverInfo?.driver?.id || 'N/A'}</Text>
             </View>
             <View className="flex-row items-center">
               <FontAwesome name="phone" size={20} color="#A8B5DB" />
