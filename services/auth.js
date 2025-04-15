@@ -14,13 +14,42 @@ export class AuthService {
     }
   }
 
-  // Validate the token (No decoding here, just validate using the backend)
+  // Set remembered username
+  async setRememberedUsername(username) {
+    try {
+      await this.asyncStorageSvc.setItem('rememberedUsername', username);
+    } catch (error) {
+      console.error('Error setting remembered username', error);
+      throw error;
+    }
+  }
+
+  // Get remembered username
+  async getRememberedUsername() {
+    try {
+      return await this.asyncStorageSvc.getItem('rememberedUsername');
+    } catch (error) {
+      console.error('Error getting remembered username', error);
+      throw error;
+    }
+  }
+
+  // Remove remembered username
+  async removeRememberedUsername() {
+    try {
+      await this.asyncStorageSvc.removeItem('rememberedUsername');
+    } catch (error) {
+      console.error('Error removing remembered username', error);
+      throw error;
+    }
+  }
+
+  // Validate the token
   async isTokenValid() {
     try {
       const token = await this.getToken();
       if (!token) return false;
-
-      return await this.authApi.validateToken(token); // Assumes backend will validate
+      return await this.authApi.validateToken(token);
     } catch (error) {
       console.error('Error validating token', error);
       return false;
@@ -33,8 +62,8 @@ export class AuthService {
       const { token, userData } = await this.authApi.login({ profileEmail, profilePassword });
       if (!token || !userData) return false;
 
-      // Store both token and user data in AsyncStorage
-      await this.asyncStorageSvc.setItem('authToken', JSON.stringify(token));
+      // Store token and user data in AsyncStorage
+      await this.asyncStorageSvc.setItem('authToken', token);
       await this.asyncStorageSvc.setItem('user', JSON.stringify(userData));
 
       return true;
@@ -54,13 +83,12 @@ export class AuthService {
     }
   }
 
-  // Clear all data from AsyncStorage
+  // Clear all storage
   async clearAllStorage() {
     try {
-      await this.asyncStorageSvc.clearAllStorage(); // Using the method from AsyncStorageService
-      console.log('AsyncStorage cleared successfully!');
+      await this.asyncStorageSvc.clearAllStorage();
     } catch (error) {
-      console.error('Error clearing AsyncStorage:', error);
+      console.error('Error clearing storage', error);
     }
   }
 }
