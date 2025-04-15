@@ -74,7 +74,13 @@ describe('AuthService', () => {
     const profileEmail = 'test@example.com';
     const profilePassword = 'password';
     const token = 'mockToken';
-    const userData = { id: 1, email: profileEmail };
+    const userData = { 
+      carrier: { prettyName: 'Test Carrier' },
+      driverInfo: { 
+        driver: { prettyName: 'Test Driver' },
+        contact: { email: 'test@example.com', phoneNumber: '1234567890' }
+      }
+    };
 
     mockAuthApi.login.mockResolvedValue({ token, userData });
 
@@ -123,5 +129,38 @@ describe('AuthService', () => {
 
     // Assert
     expect(result).toBe(false);
+  });
+
+  // Remember Me functionality tests
+  test('should set remembered username', async () => {
+    // Arrange
+    const username = 'test@example.com';
+
+    // Act
+    await authService.setRememberedUsername(username);
+
+    // Assert
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('rememberedUsername', username);
+  });
+
+  test('should get remembered username', async () => {
+    // Arrange
+    const username = 'test@example.com';
+    mockAsyncStorageSvc.getItem.mockResolvedValue(username);
+
+    // Act
+    const result = await authService.getRememberedUsername();
+
+    // Assert
+    expect(result).toBe(username);
+    expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('rememberedUsername');
+  });
+
+  test('should remove remembered username', async () => {
+    // Act
+    await authService.removeRememberedUsername();
+
+    // Assert
+    expect(mockAsyncStorageSvc.removeItem).toHaveBeenCalledWith('rememberedUsername');
   });
 });
