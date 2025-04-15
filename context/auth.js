@@ -11,10 +11,19 @@ import { BASE_API_URL } from '../util/const';
 
 const AuthContext = createContext();
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rememberedUsername, setRememberedUsername] = useState('');
 
   const httpClient = useMemo(() => new HttpRequestClient(axios), []);
   const authApi = useMemo(() => new AuthApi(httpClient, BASE_API_URL), []);
@@ -26,8 +35,14 @@ export const AuthProvider = ({ children }) => {
   // Load and validate auth state from AsyncStorage
   useEffect(() => {
     const loadAuthData = async () => {
-      setLoading(false);
+      setLoading(true);
       try {
+        // Load remembered username
+        const storedUsername = await authSvc.getRememberedUsername();
+        if (storedUsername) {
+          setRememberedUsername(storedUsername);
+        }
+
         const storedToken = await authSvc.getToken();
         if (!storedToken) {
           setLoading(false);
@@ -41,24 +56,8 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        let userId;
-        try {
-          userId = authSvc.getUserIdFromToken(storedToken);
-        } catch (error) {
-          console.error('Invalid token:', error);
-          await authSvc.clearAllStorage();
-          setLoading(false);
-          return;
-        }
-
-        if (!userId) {
-          console.error('User ID not found in token');
-          await authSvc.clearAllStorage();
-          setLoading(false);
-          return;
-        }
-
-        const storedUser = await userSvc.getUser(userId);
+        // Get user data from storage
+        const storedUser = await userSvc.getUser();
         if (storedUser) {
           setToken(storedToken);
           setUser(storedUser);
@@ -76,11 +75,20 @@ export const AuthProvider = ({ children }) => {
     loadAuthData();
   }, []);
 
-  const login = async ({ profileEmail, profilePassword }) => {
+  const login = async ({ profileEmail, profilePassword, rememberMe }) => {
     try {
       const success = await authSvc.signIn({ profileEmail, profilePassword });
       const token = await authSvc.getToken();
       const user = await userSvc.getUser();
+
+      // Handle remember me
+      if (rememberMe) {
+        await authSvc.setRememberedUsername(profileEmail);
+        setRememberedUsername(profileEmail);
+      } else {
+        await authSvc.removeRememberedUsername();
+        setRememberedUsername('');
+      }
 
       setToken(token);
       setUser(user);
@@ -101,12 +109,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      isAuthenticated: !!token, 
+      login, 
+      logout, 
+      loading,
+      rememberedUsername 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-const useAuth = () => useContext(AuthContext);
-
-export { AuthContext, useAuth };

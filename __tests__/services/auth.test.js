@@ -83,7 +83,7 @@ describe('AuthService', () => {
 
     // Assert
     expect(result).toBe(true);
-    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('authToken', JSON.stringify(token));
+    expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('authToken', token);
     expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith('user', JSON.stringify(userData));
   });
 

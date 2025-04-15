@@ -31,53 +31,61 @@ const LocationScreen = () => {
   }, []);
 
   return (
-    <View className="flex-1 bg-gray-100">
-      <View className="items-center pt-8 pb-4">
-        <Text className="text-xl font-bold mb-4">Location Tracking</Text>
-        <Pressable onPress={() => isTracking ? stopTracking() : startTracking()}>
+    <View className="flex-1 bg-primary">
+      <View className="flex-1 px-5 pt-8">
+        <Text className="text-2xl font-bold text-white mb-8">Location Tracking</Text>
+        
+        <Pressable 
+          onPress={() => isTracking ? stopTracking() : startTracking()}
+          className="flex-row items-center justify-center bg-dark-100 p-4 rounded-lg mb-6"
+        >
           <FontAwesome 
             name={isTracking ? "toggle-on" : "toggle-off"} 
-            size={100} 
-            color={isTracking ? "green" : "gray"} 
+            size={24} 
+            color={isTracking ? "#4CAF50" : "#A8B5DB"} 
           />
+          <Text className="text-light-200 text-lg ml-4">
+            {isTracking ? "Stop Tracking" : "Start Tracking"}
+          </Text>
         </Pressable>
-      </View>
 
-      {location && (
-        <View className="p-4 mx-4 mb-4 bg-white rounded-lg shadow">
-          <Text className="text-lg font-semibold mb-2">Current Location</Text>
-          <Text>Latitude: {location.latitude.toFixed(6)}</Text>
-          <Text>Longitude: {location.longitude.toFixed(6)}</Text>
-          {location.formattedAddress && (
-            <Text>Address: {location.formattedAddress}</Text>
-          )}
-          <Text>Time: {formatDate(location.timestamp)}</Text>
-        </View>
-      )}
+        {location && (
+          <View className="bg-dark-100 p-4 rounded-lg mb-6">
+            <Text className="text-lg font-semibold text-white mb-2">Current Location</Text>
+            <Text className="text-light-200">Latitude: {location.latitude.toFixed(6)}</Text>
+            <Text className="text-light-200">Longitude: {location.longitude.toFixed(6)}</Text>
+            {location.formattedAddress && (
+              <Text className="text-light-200">Address: {location.formattedAddress}</Text>
+            )}
+            <Text className="text-light-200">Time: {formatDate(location.timestamp)}</Text>
+          </View>
+        )}
 
-      <View className="flex-1 px-4">
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-lg font-semibold">Location History</Text>
-          {isLoading && (
-            <ActivityIndicator size="small" color="#0000ff" />
-          )}
+        <View className="flex-1">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-lg font-semibold text-white">Location History</Text>
+            {isLoading && (
+              <ActivityIndicator size="small" color="#A8B5DB" />
+            )}
+          </View>
+          
+          <ScrollView 
+            className="flex-1"
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {locationHistory.map((location: LocationData, index: number) => (
+              <View key={index} className="bg-dark-100 p-4 rounded-lg mb-3">
+                <Text className="text-light-200">Latitude: {location.latitude.toFixed(6)}</Text>
+                <Text className="text-light-200">Longitude: {location.longitude.toFixed(6)}</Text>
+                {location.formattedAddress && (
+                  <Text className="text-light-200">Address: {location.formattedAddress}</Text>
+                )}
+                <Text className="text-light-200">Time: {formatDate(location.timestamp)}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
-        <ScrollView 
-          className="flex-1"
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        >
-          {locationHistory.map((location: LocationData, index: number) => (
-            <View key={index} className="p-3 mb-2 bg-white rounded-lg shadow">
-              <Text>Latitude: {location.latitude.toFixed(6)}</Text>
-              <Text>Longitude: {location.longitude.toFixed(6)}</Text>
-              {location.formattedAddress && (
-                <Text>Address: {location.formattedAddress}</Text>
-              )}
-              <Text>Time: {formatDate(location.timestamp)}</Text>
-            </View>
-          ))}
-        </ScrollView>
       </View>
     </View>
   );
