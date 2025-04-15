@@ -27,13 +27,4 @@ jobs:
       run: npm ci
     
     - name: Run tests
-      run: npm test -- --watchAll=false
-    
-    - name: Upload test results
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: test-results
-        path: |
-          coverage
-          test-results 
+      run: npm test -- --watchAll=false 
