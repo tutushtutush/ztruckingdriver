@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { LocationService } from '../services/location';
 import { LocationApi } from '../api/location';
 import { AuthService } from '../services/auth';
+import { AsyncStorageService } from '../services/asyncStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BASE_API_URL } from '../util/const';
 
@@ -24,8 +26,9 @@ export const LocationProvider = ({ children }) => {
 
   // Create instances of required services
   const locationApi = new LocationApi(axios, BASE_API_URL);
-  const authService = new AuthService();
-  const locationService = new LocationService(locationApi, authService);
+  const asyncStorageSvc = new AsyncStorageService(AsyncStorage);
+  const authService = new AuthService(locationApi, asyncStorageSvc);
+  const locationService = new LocationService(locationApi, authService, asyncStorageSvc);
 
   useEffect(() => {
     return () => {
@@ -45,6 +48,7 @@ export const LocationProvider = ({ children }) => {
       });
       setIsTracking(true);
     } catch (err) {
+      console.error('Error starting tracking:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);

@@ -2,11 +2,13 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 export class LocationService {
-  constructor(locationApi, authService) {
+  constructor(locationApi, authService, asyncStorageSvc) {
     this.locationApi = locationApi;
     this.authService = authService;
+    this.asyncStorageSvc = asyncStorageSvc;
     this.watchId = null;
     this.locationCallback = null;
+    this.locationHistoryKey = 'locationHistory';
   }
 
   async requestPermissions() {
@@ -31,62 +33,40 @@ export class LocationService {
       async (location) => {
         const { latitude, longitude } = location.coords;
         const timestamp = location.timestamp;
+        let locationData = { latitude, longitude, timestamp };
 
-        // Try to get the address
         try {
+          // Try to get the address
           const [address] = await Location.reverseGeocodeAsync({
             latitude,
             longitude,
           });
           
-          const formattedAddress = address
-            ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`
-            : undefined;
-
-          const locationData = {
-            latitude,
-            longitude,
-            timestamp,
-            formattedAddress,
-          };
-
-          if (this.locationCallback) {
-            this.locationCallback(locationData);
-          }
-
-          // Send location data to API if auth service is available
-          if (this.locationApi && this.authService) {
-            try {
-              const token = this.authService.getToken();
-              if (token) {
-                await this.locationApi.sendLocationData(locationData, token);
-              }
-            } catch (error) {
-              console.error('Failed to send location data to API:', error);
-            }
+          if (address) {
+            locationData.formattedAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim();
           }
         } catch (error) {
-          // If reverse geocoding fails, still send the coordinates
-          const locationData = {
-            latitude,
-            longitude,
-            timestamp,
-          };
+          // If reverse geocoding fails, continue with just coordinates
+          console.error('Reverse geocoding failed:', error);
+        }
 
-          if (this.locationCallback) {
-            this.locationCallback(locationData);
-          }
+        // Always update callback with latest location data
+        if (this.locationCallback) {
+          this.locationCallback(locationData);
+        }
 
-          // Send location data to API if auth service is available
-          if (this.locationApi && this.authService) {
-            try {
-              const token = this.authService.getToken();
-              if (token) {
-                await this.locationApi.sendLocationData(locationData, token);
-              }
-            } catch (error) {
-              console.error('Failed to send location data to API:', error);
+        // Save to local storage
+        await this.saveLocationToLocalHistory(locationData);
+
+        // Send location data to API if auth service is available
+        if (this.locationApi && this.authService) {
+          try {
+            const token = this.authService.getToken();
+            if (token) {
+              await this.locationApi.sendLocationData(locationData, token);
             }
+          } catch (error) {
+            console.error('Failed to send location data to API:', error);
           }
         }
       }
@@ -101,19 +81,61 @@ export class LocationService {
     }
   }
 
+  async saveLocationToLocalHistory(locationData) {
+    if (!this.asyncStorageSvc) return;
+    
+    try {
+      // Get existing history
+      const existingHistory = await this.getLocalLocationHistory();
+      
+      // Add new location to the beginning of the array
+      const updatedHistory = [locationData, ...existingHistory];
+      
+      // Limit history to last 100 entries to prevent excessive storage usage
+      const limitedHistory = updatedHistory.slice(0, 100);
+      
+      // Save back to storage
+      await this.asyncStorageSvc.setItem(this.locationHistoryKey, limitedHistory);
+    } catch (error) {
+      console.error('Failed to save location to local history:', error);
+    }
+  }
+
+  async getLocalLocationHistory() {
+    if (!this.asyncStorageSvc) return [];
+    
+    try {
+      const history = await this.asyncStorageSvc.getItem(this.locationHistoryKey);
+      return history || [];
+    } catch (error) {
+      console.error('Failed to get local location history:', error);
+      return [];
+    }
+  }
+
   async getLocationHistory() {
+    // First try to get from API
     if (this.locationApi && this.authService) {
       try {
         const token = this.authService.getToken();
         if (token) {
-          return await this.locationApi.getLocationHistory(token);
+          const apiHistory = await this.locationApi.getLocationHistory(token);
+          
+          // If API call succeeds, update local storage with the latest data
+          if (apiHistory && apiHistory.length > 0) {
+            await this.asyncStorageSvc.setItem(this.locationHistoryKey, apiHistory);
+          }
+          
+          return apiHistory;
         }
       } catch (error) {
         console.error('Failed to get location history from API:', error);
-        throw error;
+        // Don't throw error, fall back to local storage
       }
     }
-    return [];
+    console.log('Falling back to local storage');
+    // Fall back to local storage if API fails or is not available
+    return this.getLocalLocationHistory();
   }
 }
 

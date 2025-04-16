@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async ({ profileEmail, profilePassword, rememberMe }) => {
     try {
-      const success = await authSvc.signIn({ profileEmail, profilePassword });
+      const response = await authSvc.signIn({ profileEmail, profilePassword });
       const token = await authSvc.getToken();
       const user = await userSvc.getUser();
 
@@ -94,7 +94,6 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
       setToken(null);
       setUser(null);
       await authSvc.clearAllStorage();
