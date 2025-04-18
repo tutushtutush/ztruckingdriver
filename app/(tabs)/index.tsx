@@ -44,7 +44,7 @@ export default function Index() {
       >
         {/* Header with Logo and Welcome */}
         <View className="items-center mt-20 mb-8">
-          <Image source={icons.logo} className="w-12 h-10 mb-4"/>
+          <Image source={icons.logo} className="w-12 h-12 mb-4" resizeMode="contain"/>
           <Text className="text-2xl font-bold text-white">
             Welcome, {user?.driverInfo?.contact?.firstName || 'Driver'}
           </Text>

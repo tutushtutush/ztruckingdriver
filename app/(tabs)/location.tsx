@@ -10,7 +10,7 @@ interface LocationData {
   formattedAddress?: string;
 }
 
-const formatDate = (timestamp: number): string => {
+const formatDate = (timestamp: number) => {
   return new Date(timestamp).toLocaleString();
 };
 
@@ -22,7 +22,10 @@ const LocationScreen = () => {
     location, 
     locationHistory, 
     isLoading,
-    loadLocationHistory 
+    loadLocationHistory,
+    isOnline,
+    failedLocationsCount,
+    retryFailedLocations
   } = useLocation();
 
   // Load location history when component mounts
@@ -35,6 +38,23 @@ const LocationScreen = () => {
       <View className="flex-1 px-5 pt-8">
         <Text className="text-2xl font-bold text-white mb-8">Location Tracking</Text>
         
+        {/* Network Status */}
+        <View className="flex-row items-center mb-4">
+          <View className={`w-2 h-2 rounded-full mr-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+          <Text className="text-light-200">{isOnline ? 'Online' : 'Offline'}</Text>
+          {failedLocationsCount > 0 && (
+            <View className="flex-row items-center ml-4">
+              <Text className="text-light-200 mr-2">{failedLocationsCount} failed updates</Text>
+              <Pressable 
+                onPress={retryFailedLocations}
+                className="bg-dark-100 px-3 py-1 rounded-lg"
+              >
+                <Text className="text-light-200">Retry</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
         <Pressable 
           onPress={() => isTracking ? stopTracking() : startTracking()}
           className="flex-row items-center justify-center bg-dark-100 p-4 rounded-lg mb-6"

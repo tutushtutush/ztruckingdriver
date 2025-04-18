@@ -40,6 +40,9 @@ jest.mock('../../services/asyncStorage', () => ({
   })),
 }));
 
+// Mock setInterval
+jest.useFakeTimers();
+
 describe('LocationService', () => {
   let location;
   let mockLocationApi;
@@ -56,6 +59,7 @@ describe('LocationService', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
+    jest.clearAllTimers();
     
     // Create mock instances
     mockLocationApi = new LocationApi();
@@ -96,6 +100,12 @@ describe('LocationService', () => {
     });
 
     it('should handle location updates with successful reverse geocoding and API integration', async () => {
+      // Set a longer timeout for this test
+      jest.setTimeout(10000);
+
+      // Enable fake timers in modern mode
+      jest.useFakeTimers({ legacyFakeTimers: false });
+
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
       Location.reverseGeocodeAsync.mockResolvedValue([{
         street: '123 Main St',
@@ -106,17 +116,62 @@ describe('LocationService', () => {
       mockLocationApi.sendLocationData.mockResolvedValue({ success: true });
       mockAsyncStorageSvc.getItem.mockResolvedValue([]);
 
+      // Create a promise that resolves when setItem is called with locationHistory
+      let locationHistoryPromise;
+      const locationHistoryPromiseResolve = jest.fn();
+      locationHistoryPromise = new Promise(resolve => {
+        locationHistoryPromiseResolve.mockImplementation(resolve);
+      });
+
+      // Mock setItem to resolve the promise when called with locationHistory
+      mockAsyncStorageSvc.setItem.mockImplementation(async (key, value) => {
+        if (key === 'locationHistory') {
+          locationHistoryPromiseResolve(value);
+        }
+      });
+
+      // Create a promise that resolves when sendLocationData is called
+      let sendLocationDataPromise;
+      const sendLocationDataPromiseResolve = jest.fn();
+      sendLocationDataPromise = new Promise(resolve => {
+        sendLocationDataPromiseResolve.mockImplementation(resolve);
+      });
+
+      // Mock sendLocationData to resolve the promise when called
+      mockLocationApi.sendLocationData.mockImplementation(async (data, token) => {
+        sendLocationDataPromiseResolve({ data, token });
+        return { success: true };
+      });
+
       // Mock watchPositionAsync to immediately call the callback
       Location.watchPositionAsync.mockImplementation((options, callback) => {
-        setTimeout(() => callback(mockLocation), 0);
+        // Call the callback immediately
+        callback(mockLocation);
         return Promise.resolve({ remove: jest.fn() });
       });
 
-      await location.startTracking(mockCallback);
+      // Mock setInterval to prevent infinite loops
+      const mockSetInterval = jest.spyOn(global, 'setInterval');
+      mockSetInterval.mockImplementation((callback) => {
+        // Call the callback once immediately
+        callback();
+        return 123; // Return a mock interval ID
+      });
 
-      // Wait for the async operations to complete
-      await new Promise(resolve => setTimeout(resolve, 0));
+      // Start tracking
+      const trackingPromise = location.startTracking(mockCallback);
+      
+      // Run all pending timers and promises
+      jest.runAllTimers();
+      await trackingPromise;
 
+      // Wait for both the location history to be saved and the API call to be made
+      const [savedLocationHistory, apiCall] = await Promise.all([
+        locationHistoryPromise,
+        sendLocationDataPromise
+      ]);
+
+      // Verify callback was called with location data
       expect(mockCallback).toHaveBeenCalledWith({
         latitude: mockLocation.coords.latitude,
         longitude: mockLocation.coords.longitude,
@@ -124,19 +179,19 @@ describe('LocationService', () => {
         formattedAddress: '123 Main St New York NY'
       });
 
-      expect(mockLocationApi.sendLocationData).toHaveBeenCalledWith(
-        {
+      // Verify API call was made with location data
+      expect(apiCall).toEqual({
+        data: {
           latitude: mockLocation.coords.latitude,
           longitude: mockLocation.coords.longitude,
           timestamp: mockLocation.timestamp,
           formattedAddress: '123 Main St New York NY'
         },
-        'test-token'
-      );
+        token: 'test-token'
+      });
       
-      // Verify local storage was updated
-      expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
-        'locationHistory',
+      // Verify local storage was updated with location data
+      expect(savedLocationHistory).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             latitude: mockLocation.coords.latitude,
@@ -146,25 +201,80 @@ describe('LocationService', () => {
           })
         ])
       );
-    });
+
+      // Clean up
+      mockSetInterval.mockRestore();
+      jest.useRealTimers();
+      jest.clearAllMocks();
+    }, 10000); // Add timeout to the test
 
     it('should handle location updates when reverse geocoding fails but still send to API', async () => {
+      // Set a longer timeout for this test
+      jest.setTimeout(10000);
+
+      // Enable fake timers in modern mode
+      jest.useFakeTimers({ legacyFakeTimers: false });
+
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
       Location.reverseGeocodeAsync.mockRejectedValue(new Error('Geocoding failed'));
       mockAuthService.getToken.mockReturnValue('test-token');
       mockLocationApi.sendLocationData.mockResolvedValue({ success: true });
       mockAsyncStorageSvc.getItem.mockResolvedValue([]);
 
+      // Create a promise that resolves when setItem is called with locationHistory
+      let locationHistoryPromise;
+      const locationHistoryPromiseResolve = jest.fn();
+      locationHistoryPromise = new Promise(resolve => {
+        locationHistoryPromiseResolve.mockImplementation(resolve);
+      });
+
+      // Mock setItem to resolve the promise when called with locationHistory
+      mockAsyncStorageSvc.setItem.mockImplementation(async (key, value) => {
+        if (key === 'locationHistory') {
+          locationHistoryPromiseResolve(value);
+        }
+      });
+
+      // Create a promise that resolves when sendLocationData is called
+      let sendLocationDataPromise;
+      const sendLocationDataPromiseResolve = jest.fn();
+      sendLocationDataPromise = new Promise(resolve => {
+        sendLocationDataPromiseResolve.mockImplementation(resolve);
+      });
+
+      // Mock sendLocationData to resolve the promise when called
+      mockLocationApi.sendLocationData.mockImplementation(async (data, token) => {
+        sendLocationDataPromiseResolve({ data, token });
+        return { success: true };
+      });
+
       // Mock watchPositionAsync to immediately call the callback
       Location.watchPositionAsync.mockImplementation((options, callback) => {
-        setTimeout(() => callback(mockLocation), 0);
+        // Call the callback immediately
+        callback(mockLocation);
         return Promise.resolve({ remove: jest.fn() });
       });
 
-      await location.startTracking(mockCallback);
+      // Mock setInterval to prevent infinite loops
+      const mockSetInterval = jest.spyOn(global, 'setInterval');
+      mockSetInterval.mockImplementation((callback) => {
+        // Call the callback once immediately
+        callback();
+        return 123; // Return a mock interval ID
+      });
 
-      // Wait for the async operations to complete
-      await new Promise(resolve => setTimeout(resolve, 0));
+      // Start tracking
+      const trackingPromise = location.startTracking(mockCallback);
+      
+      // Run all pending timers and promises
+      jest.runAllTimers();
+      await trackingPromise;
+
+      // Wait for both the location history to be saved and the API call to be made
+      const [savedLocationHistory, apiCall] = await Promise.all([
+        locationHistoryPromise,
+        sendLocationDataPromise
+      ]);
 
       // Verify callback was called with basic location data
       expect(mockCallback).toHaveBeenCalledWith({
@@ -174,18 +284,17 @@ describe('LocationService', () => {
       });
 
       // Verify API call was made with basic location data
-      expect(mockLocationApi.sendLocationData).toHaveBeenCalledWith(
-        {
+      expect(apiCall).toEqual({
+        data: {
           latitude: mockLocation.coords.latitude,
           longitude: mockLocation.coords.longitude,
           timestamp: mockLocation.timestamp
         },
-        'test-token'
-      );
+        token: 'test-token'
+      });
       
       // Verify local storage was updated with basic location data
-      expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
-        'locationHistory',
+      expect(savedLocationHistory).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             latitude: mockLocation.coords.latitude,
@@ -194,9 +303,28 @@ describe('LocationService', () => {
           })
         ])
       );
-    });
 
-    it('should handle API errors gracefully', async () => {
+      // Clean up
+      mockSetInterval.mockRestore();
+      jest.useRealTimers();
+      jest.clearAllMocks();
+    }, 10000); // Add timeout to the test
+
+    it('should handle API errors gracefully and add to failed locations queue', async () => {
+      // Set a longer timeout for this test
+      jest.setTimeout(10000);
+
+      // Enable fake timers in modern mode
+      jest.useFakeTimers({ legacyFakeTimers: false });
+
+      // Mock AsyncStorage methods
+      mockAsyncStorageSvc.getItem.mockImplementation(async (key) => {
+        if (key === 'locationHistory') return [];
+        if (key === 'failedLocations') return [];
+        return null;
+      });
+      mockAsyncStorageSvc.setItem.mockImplementation(async () => undefined);
+
       Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
       Location.reverseGeocodeAsync.mockResolvedValue([{
         street: '123 Main St',
@@ -204,19 +332,48 @@ describe('LocationService', () => {
         region: 'NY'
       }]);
       mockAuthService.getToken.mockReturnValue('test-token');
+      
+      // Mock the API to reject with an error
       mockLocationApi.sendLocationData.mockRejectedValue(new Error('API Error'));
-      mockAsyncStorageSvc.getItem.mockResolvedValue([]);
+
+      // Create a promise that resolves when setItem is called with failedLocations
+      let failedLocationsPromise;
+      const failedLocationsPromiseResolve = jest.fn();
+      failedLocationsPromise = new Promise(resolve => {
+        failedLocationsPromiseResolve.mockImplementation(resolve);
+      });
+
+      // Mock setItem to resolve the promise when called with failedLocations
+      mockAsyncStorageSvc.setItem.mockImplementation(async (key, value) => {
+        if (key === 'failedLocations') {
+          failedLocationsPromiseResolve(value);
+        }
+      });
 
       // Mock watchPositionAsync to immediately call the callback
       Location.watchPositionAsync.mockImplementation((options, callback) => {
-        setTimeout(() => callback(mockLocation), 0);
+        // Call the callback immediately
+        callback(mockLocation);
         return Promise.resolve({ remove: jest.fn() });
       });
 
-      await location.startTracking(mockCallback);
+      // Mock setInterval to prevent infinite loops
+      const mockSetInterval = jest.spyOn(global, 'setInterval');
+      mockSetInterval.mockImplementation((callback) => {
+        // Call the callback once immediately
+        callback();
+        return 123; // Return a mock interval ID
+      });
 
-      // Wait for the async operations to complete
-      await new Promise(resolve => setTimeout(resolve, 0));
+      // Start tracking
+      const trackingPromise = location.startTracking(mockCallback);
+      
+      // Run all pending timers and promises
+      jest.runAllTimers();
+      await trackingPromise;
+
+      // Wait for the failed locations to be saved
+      const savedFailedLocations = await failedLocationsPromise;
 
       // Verify callback was still called with location data
       expect(mockCallback).toHaveBeenCalledWith({
@@ -225,8 +382,8 @@ describe('LocationService', () => {
         timestamp: mockLocation.timestamp,
         formattedAddress: '123 Main St New York NY'
       });
-      
-      // Verify local storage was still updated
+
+      // Verify locationHistory was saved
       expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
         'locationHistory',
         expect.arrayContaining([
@@ -238,7 +395,24 @@ describe('LocationService', () => {
           })
         ])
       );
-    });
+
+      // Verify failed locations were saved
+      expect(savedFailedLocations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            latitude: mockLocation.coords.latitude,
+            longitude: mockLocation.coords.longitude,
+            timestamp: mockLocation.timestamp,
+            formattedAddress: '123 Main St New York NY'
+          })
+        ])
+      );
+
+      // Clean up
+      mockSetInterval.mockRestore();
+      jest.useRealTimers();
+      jest.clearAllMocks();
+    }, 10000); // Add timeout to the test
   });
 
   describe('stopTracking', () => {
@@ -375,6 +549,172 @@ describe('LocationService', () => {
       const result = await location.getLocalLocationHistory();
       
       expect(result).toEqual([]);
+    });
+  });
+
+  // New tests for failed locations functionality
+  describe('failed locations queue', () => {
+    it('should add location to failed locations queue', async () => {
+      const locationData = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        timestamp: 1234567890,
+        formattedAddress: '123 Main St, New York, NY'
+      };
+      
+      mockAsyncStorageSvc.getItem.mockResolvedValue([]);
+      
+      await location.addToFailedLocations(locationData);
+      
+      expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('failedLocations');
+      expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
+        'failedLocations',
+        [locationData]
+      );
+    });
+
+    it('should get failed locations', async () => {
+      const mockFailedLocations = [
+        { latitude: 40.7128, longitude: -74.0060, timestamp: 1234567890 },
+        { latitude: 40.7129, longitude: -74.0061, timestamp: 1234567891 }
+      ];
+      
+      mockAsyncStorageSvc.getItem.mockResolvedValue(mockFailedLocations);
+      
+      const result = await location.getFailedLocations();
+      
+      expect(result).toEqual(mockFailedLocations);
+      expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('failedLocations');
+    });
+
+    it('should return empty array when failed locations storage fails', async () => {
+      mockAsyncStorageSvc.getItem.mockRejectedValue(new Error('Storage error'));
+      
+      const result = await location.getFailedLocations();
+      
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('retry failed locations', () => {
+    it('should not retry if already retrying', async () => {
+      location.isRetrying = true;
+      
+      await location.retryFailedLocations();
+      
+      expect(mockAsyncStorageSvc.getItem).not.toHaveBeenCalled();
+      expect(mockLocationApi.sendLocationData).not.toHaveBeenCalled();
+    });
+
+    it('should not retry if no failed locations', async () => {
+      mockAsyncStorageSvc.getItem.mockResolvedValue([]);
+      
+      await location.retryFailedLocations();
+      
+      expect(mockAuthService.getToken).not.toHaveBeenCalled();
+      expect(mockLocationApi.sendLocationData).not.toHaveBeenCalled();
+    });
+
+    it('should not retry if no auth token', async () => {
+      const mockFailedLocations = [
+        { latitude: 40.7128, longitude: -74.0060, timestamp: 1234567890 }
+      ];
+      
+      mockAsyncStorageSvc.getItem.mockResolvedValue(mockFailedLocations);
+      mockAuthService.getToken.mockReturnValue(null);
+      
+      await location.retryFailedLocations();
+      
+      expect(mockLocationApi.sendLocationData).not.toHaveBeenCalled();
+    });
+
+    it('should retry failed locations and update queues on success', async () => {
+      const mockFailedLocations = [
+        { latitude: 40.7128, longitude: -74.0060, timestamp: 1234567890 },
+        { latitude: 40.7129, longitude: -74.0061, timestamp: 1234567891 },
+        { latitude: 40.7130, longitude: -74.0062, timestamp: 1234567892 }
+      ];
+      
+      mockAsyncStorageSvc.getItem.mockResolvedValue(mockFailedLocations);
+      mockAuthService.getToken.mockReturnValue('test-token');
+      
+      // First location succeeds, second fails, third succeeds
+      mockLocationApi.sendLocationData
+        .mockResolvedValueOnce({ success: true })
+        .mockRejectedValueOnce(new Error('API Error'))
+        .mockResolvedValueOnce({ success: true });
+      
+      await location.retryFailedLocations();
+      
+      // Verify API calls were made for all locations
+      expect(mockLocationApi.sendLocationData).toHaveBeenCalledTimes(3);
+      
+      // Verify failed locations queue was updated with only the failed location
+      expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
+        'failedLocations',
+        [mockFailedLocations[1]]
+      );
+      
+      // Verify local history was updated with successful locations
+      expect(mockAsyncStorageSvc.setItem).toHaveBeenCalledWith(
+        'locationHistory',
+        expect.arrayContaining([
+          expect.objectContaining(mockFailedLocations[0]),
+          expect.objectContaining(mockFailedLocations[2])
+        ])
+      );
+    });
+
+    it('should handle errors during retry process', async () => {
+      const mockFailedLocations = [
+        { latitude: 40.7128, longitude: -74.0060, timestamp: 1234567890 }
+      ];
+      
+      mockAsyncStorageSvc.getItem.mockResolvedValue(mockFailedLocations);
+      mockAuthService.getToken.mockReturnValue('test-token');
+      mockAsyncStorageSvc.setItem.mockRejectedValue(new Error('Storage error'));
+      
+      // This should not throw an error
+      await location.retryFailedLocations();
+      
+      // Verify isRetrying was reset to false
+      expect(location.isRetrying).toBe(false);
+    });
+  });
+
+  describe('periodic retry', () => {
+    it('should set up interval for periodic retry', () => {
+      // Enable fake timers
+      jest.useFakeTimers({ legacyFakeTimers: false });
+
+      // Mock setInterval
+      const mockSetInterval = jest.fn();
+      global.setInterval = mockSetInterval;
+
+      // Spy on retryFailedLocations
+      const retryFailedLocationsSpy = jest.spyOn(location, 'retryFailedLocations');
+      
+      // Call startPeriodicRetry
+      location.startPeriodicRetry();
+      
+      // Verify setInterval was called with correct interval
+      expect(mockSetInterval).toHaveBeenCalledWith(
+        expect.any(Function),
+        5 * 60 * 1000 // 5 minutes in milliseconds
+      );
+      
+      // Get the callback function
+      const intervalCallback = mockSetInterval.mock.calls[0][0];
+      
+      // Call the interval callback
+      intervalCallback();
+      
+      // Verify retryFailedLocations was called
+      expect(retryFailedLocationsSpy).toHaveBeenCalled();
+      
+      // Clean up
+      jest.useRealTimers();
+      jest.clearAllMocks();
     });
   });
 }); 

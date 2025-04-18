@@ -9,6 +9,8 @@ export class LocationService {
     this.watchId = null;
     this.locationCallback = null;
     this.locationHistoryKey = 'locationHistory';
+    this.failedLocationsKey = 'failedLocations';
+    this.isRetrying = false;
   }
 
   async requestPermissions() {
@@ -67,10 +69,15 @@ export class LocationService {
             }
           } catch (error) {
             console.error('Failed to send location data to API:', error);
+            // Add to failed locations queue
+            await this.addToFailedLocations(locationData);
           }
         }
       }
     );
+
+    // Start periodic retry of failed locations
+    this.startPeriodicRetry();
   }
 
   async stopTracking() {
@@ -99,6 +106,77 @@ export class LocationService {
     } catch (error) {
       console.error('Failed to save location to local history:', error);
     }
+  }
+
+  async addToFailedLocations(locationData) {
+    if (!this.asyncStorageSvc) return;
+    
+    try {
+      const failedLocations = await this.getFailedLocations();
+      const updatedFailedLocations = [locationData, ...failedLocations];
+      await this.asyncStorageSvc.setItem(this.failedLocationsKey, updatedFailedLocations);
+    } catch (error) {
+      console.error('Failed to save to failed locations queue:', error);
+    }
+  }
+
+  async getFailedLocations() {
+    if (!this.asyncStorageSvc) return [];
+    
+    try {
+      const failedLocations = await this.asyncStorageSvc.getItem(this.failedLocationsKey);
+      return failedLocations || [];
+    } catch (error) {
+      console.error('Failed to get failed locations:', error);
+      return [];
+    }
+  }
+
+  async retryFailedLocations() {
+    if (this.isRetrying) return;
+    this.isRetrying = true;
+
+    try {
+      const failedLocations = await this.getFailedLocations();
+      if (failedLocations.length === 0) return;
+
+      const token = this.authService.getToken();
+      if (!token) return;
+
+      const successfulLocations = [];
+      const stillFailedLocations = [];
+
+      for (const location of failedLocations) {
+        try {
+          await this.locationApi.sendLocationData(location, token);
+          successfulLocations.push(location);
+        } catch (error) {
+          console.error('Failed to retry sending location:', error);
+          stillFailedLocations.push(location);
+        }
+      }
+
+      // Update failed locations queue with only the ones that still failed
+      await this.asyncStorageSvc.setItem(this.failedLocationsKey, stillFailedLocations);
+
+      // If we successfully sent some locations, update the local history
+      if (successfulLocations.length > 0) {
+        const currentHistory = await this.getLocalLocationHistory();
+        const updatedHistory = [...successfulLocations, ...currentHistory];
+        await this.asyncStorageSvc.setItem(this.locationHistoryKey, updatedHistory);
+      }
+    } catch (error) {
+      console.error('Error during retry of failed locations:', error);
+    } finally {
+      this.isRetrying = false;
+    }
+  }
+
+  startPeriodicRetry() {
+    // Retry failed locations every 5 minutes
+    setInterval(() => {
+      this.retryFailedLocations();
+    }, 5 * 60 * 1000);
   }
 
   async getLocalLocationHistory() {
