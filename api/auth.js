@@ -43,8 +43,15 @@ export class AuthApi {
         });
       }
 
-      // Forward structured message for UI with additional fallback
-      throw new Error(error.response?.data?.message || error.message || 'Login failed');
+      // Get the error message from various possible sources
+      const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.response?.data?.detail ||
+                         error.message || 
+                         'Invalid username or password';
+
+      // Forward structured message for UI
+      throw new Error(errorMessage);
     }
   }
 

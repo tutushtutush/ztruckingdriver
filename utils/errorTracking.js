@@ -5,6 +5,7 @@ import { ErrorTrackingApi } from '../api/errorTracking';
 const FAILED_ERRORS_KEY = '@failed_errors';
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const MAX_STORED_ERRORS = 100; // Maximum number of errors to store locally
 
 // Singleton instance
 let errorApi = null;
@@ -63,7 +64,9 @@ const getFailedErrors = async () => {
 // Save failed errors to storage
 const saveFailedErrors = async (errors) => {
   try {
-    await AsyncStorage.setItem(FAILED_ERRORS_KEY, JSON.stringify(errors));
+    // Keep only the most recent errors
+    const errorsToStore = errors.slice(-MAX_STORED_ERRORS);
+    await AsyncStorage.setItem(FAILED_ERRORS_KEY, JSON.stringify(errorsToStore));
   } catch (error) {
     // Silently fail - we'll try again next interval
   }
@@ -106,7 +109,11 @@ export const trackError = async (error, context = {}) => {
     }
 
     if (__DEV__) {
-      console.error('Error tracked:', errorData);
+      console.log('Error tracked:', {
+        message: errorData.error.message,
+        context: errorData.context,
+        timestamp: errorData.timestamp
+      });
     }
   } catch (trackingError) {
     // Silently fail - we'll try again next interval

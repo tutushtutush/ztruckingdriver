@@ -1,5 +1,5 @@
 import { Link, useRouter } from "expo-router";
-import { Text, View, Image, ScrollView, Pressable } from "react-native";
+import { Text, View, Image, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { images } from "@/constants/images"
 import { icons } from "@/constants/icons";
 import { useAuth } from "../../context/auth";
@@ -26,12 +26,20 @@ const QuickActionCard = ({ icon, title, onPress, color = "#A8B5DB" }: QuickActio
 );
 
 export default function Index() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { isTracking, startTracking, stopTracking, locationHistory } = useLocation();
   const router = useRouter();
 
   // Get the most recent location if available
-  const recentLocation = locationHistory[0];
+  const recentLocation = locationHistory?.[0];
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-primary justify-center items-center">
+        <ActivityIndicator size="large" color="#A8B5DB" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-primary">
