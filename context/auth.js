@@ -8,6 +8,7 @@ import axios from 'axios';
 import { UserService } from '../services/user';
 import { UserApi } from '../api/user';
 import { BASE_API_URL } from '../util/const';
+import { initializeErrorTracking, trackApiError, setUserContext, clearUserContext } from '../utils/errorTracking';
 
 const AuthContext = createContext();
 
@@ -26,11 +27,16 @@ export const AuthProvider = ({ children }) => {
   const [rememberedUsername, setRememberedUsername] = useState('');
 
   const httpClient = useMemo(() => new HttpRequestClient(axios), []);
-  const authApi = useMemo(() => new AuthApi(httpClient, BASE_API_URL), []);
-  const asyncStorageSvc = useMemo(() => new AsyncStorageService(AsyncStorage), []);
-  const authSvc = useMemo(() => new AuthService(authApi, asyncStorageSvc), []);
-  const userApi = useMemo(() => new UserApi(httpClient, BASE_API_URL), []);
-  const userSvc = useMemo(() => new UserService(userApi, asyncStorageSvc), []);
+  const asyncStorageSvc = useMemo(() => new AsyncStorageService(AsyncStorage, { trackApiError }), []);
+  const authApi = useMemo(() => new AuthApi(httpClient, BASE_API_URL, { trackApiError }), []);
+  const authSvc = useMemo(() => new AuthService(authApi, asyncStorageSvc, { trackApiError }), []);
+  const userApi = useMemo(() => new UserApi(httpClient, BASE_API_URL, { trackApiError }), []);
+  const userSvc = useMemo(() => new UserService(userApi, asyncStorageSvc, { trackApiError }), []);
+
+  // Initialize error tracking
+  useEffect(() => {
+    initializeErrorTracking(httpClient, BASE_API_URL);
+  }, [httpClient]);
 
   // Load and validate auth state from AsyncStorage
   useEffect(() => {
@@ -61,12 +67,19 @@ export const AuthProvider = ({ children }) => {
         if (storedUser) {
           setToken(storedToken);
           setUser(storedUser);
+          setUserContext(storedUser.id, storedUser.email);
         } else {
-          console.error('User not found');
+          await trackApiError(new Error('User not found'), 'AuthProvider/loadAuthData', {
+            hasToken: true,
+            hasValidToken: true,
+          });
           await authSvc.clearAllStorage();
         }
       } catch (error) {
-        console.error('Error loading auth data:', error);
+        await trackApiError(error, 'AuthProvider/loadAuthData', {
+          hasToken: !!token,
+          hasValidToken: false,
+        });
       } finally {
         setLoading(false);
       }
@@ -92,8 +105,13 @@ export const AuthProvider = ({ children }) => {
 
       setToken(token);
       setUser(user);
+      setUserContext(user.id, user.email);
       return true;
     } catch (error) {
+      await trackApiError(error, 'AuthProvider/login', {
+        hasEmail: !!profileEmail,
+        rememberMe,
+      });
       setToken(null);
       setUser(null);
       await authSvc.clearAllStorage();
@@ -102,9 +120,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    setUser(null);
-    setToken(null);
-    await authSvc.clearAllStorage();
+    try {
+      setUser(null);
+      setToken(null);
+      clearUserContext();
+      await authSvc.clearAllStorage();
+    } catch (error) {
+      await trackApiError(error, 'AuthProvider/logout', {
+        hasUser: !!user,
+        hasToken: !!token,
+      });
+      // Still clear the state even if storage fails
+      setUser(null);
+      setToken(null);
+      clearUserContext();
+    }
   };
 
   return (
