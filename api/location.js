@@ -6,19 +6,26 @@ export class LocationApi {
 
   async sendLocationData(locationData, token) {
     try {
+      const url = `${this.baseApiUrl}/d_api/location_update_app/`;
+      const cleanToken = token.replace(/"/g, '');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${cleanToken}`
+      };
+      
       const response = await this.httpClient.post(
-        `${this.baseApiUrl}/api/location/track`,
+        url,
         locationData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
+        { headers }
       );
       return response.data;
     } catch (error) {
       console.error('Error sending location data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      }
       throw error;
     }
   }

@@ -1,17 +1,19 @@
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import React, { useEffect } from 'react';
+import { View, Text, Pressable } from 'react-native';
+import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocation } from '../../context/location';
 
 interface LocationData {
   latitude: number;
   longitude: number;
-  timestamp: number;
+  locationTimeStamp: string;
   formattedAddress?: string;
 }
 
-const formatDate = (timestamp: number) => {
-  return new Date(timestamp).toLocaleString();
+const formatDate = (timestamp: string | undefined) => {
+  if (!timestamp) return 'No timestamp available';
+  const date = new Date(timestamp);
+  return date.toLocaleString();
 };
 
 const LocationScreen = () => {
@@ -20,18 +22,9 @@ const LocationScreen = () => {
     startTracking, 
     stopTracking, 
     location, 
-    locationHistory, 
     isLoading,
-    loadLocationHistory,
-    isOnline,
-    failedLocationsCount,
-    retryFailedLocations
+    isOnline
   } = useLocation();
-
-  // Load location history when component mounts
-  useEffect(() => {
-    loadLocationHistory();
-  }, []);
 
   return (
     <View className="flex-1 bg-primary">
@@ -42,17 +35,6 @@ const LocationScreen = () => {
         <View className="flex-row items-center mb-4">
           <View className={`w-2 h-2 rounded-full mr-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
           <Text className="text-light-200">{isOnline ? 'Online' : 'Offline'}</Text>
-          {failedLocationsCount > 0 && (
-            <View className="flex-row items-center ml-4">
-              <Text className="text-light-200 mr-2">{failedLocationsCount} failed updates</Text>
-              <Pressable 
-                onPress={retryFailedLocations}
-                className="bg-dark-100 px-3 py-1 rounded-lg"
-              >
-                <Text className="text-light-200">Retry</Text>
-              </Pressable>
-            </View>
-          )}
         </View>
 
         <Pressable 
@@ -77,35 +59,9 @@ const LocationScreen = () => {
             {location.formattedAddress && (
               <Text className="text-light-200">Address: {location.formattedAddress}</Text>
             )}
-            <Text className="text-light-200">Time: {formatDate(location.timestamp)}</Text>
+            <Text className="text-light-200">Time: {formatDate(location.locationTimeStamp)}</Text>
           </View>
         )}
-
-        <View className="flex-1">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-white">Location History</Text>
-            {isLoading && (
-              <ActivityIndicator size="small" color="#A8B5DB" />
-            )}
-          </View>
-          
-          <ScrollView 
-            className="flex-1"
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          >
-            {locationHistory.map((location: LocationData, index: number) => (
-              <View key={index} className="bg-dark-100 p-4 rounded-lg mb-3">
-                <Text className="text-light-200">Latitude: {location.latitude.toFixed(6)}</Text>
-                <Text className="text-light-200">Longitude: {location.longitude.toFixed(6)}</Text>
-                {location.formattedAddress && (
-                  <Text className="text-light-200">Address: {location.formattedAddress}</Text>
-                )}
-                <Text className="text-light-200">Time: {formatDate(location.timestamp)}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
       </View>
     </View>
   );
