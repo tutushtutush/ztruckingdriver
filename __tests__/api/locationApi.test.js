@@ -4,6 +4,7 @@ import { LocationApi } from '../../api/location';
 describe('LocationApi', () => {
   let locationApi;
   let mockHttpClient;
+  let mockErrorTracker;
   const baseApiUrl = 'testBaseApiUrl';
 
   beforeEach(() => {
@@ -12,8 +13,13 @@ describe('LocationApi', () => {
       post: jest.fn(),
       get: jest.fn()
     };
+
+    // Create a mock error tracker
+    mockErrorTracker = {
+      trackApiError: jest.fn()
+    };
     
-    locationApi = new LocationApi(mockHttpClient, baseApiUrl);
+    locationApi = new LocationApi(mockHttpClient, baseApiUrl, mockErrorTracker);
     jest.clearAllMocks();
   });
 
@@ -24,6 +30,22 @@ describe('LocationApi', () => {
     timestamp: 1234567890,
     formattedAddress: '123 Main St, New York, NY'
   };
+
+  describe('constructor', () => {
+    it('should initialize with http client, base url and error tracker', () => {
+      const locationApi = new LocationApi(mockHttpClient, baseApiUrl, mockErrorTracker);
+      expect(locationApi.httpClient).toBe(mockHttpClient);
+      expect(locationApi.baseApiUrl).toBe(baseApiUrl);
+      expect(locationApi.errorTracker).toBe(mockErrorTracker);
+    });
+
+    it('should work without error tracker', () => {
+      const locationApi = new LocationApi(mockHttpClient, baseApiUrl);
+      expect(locationApi.httpClient).toBe(mockHttpClient);
+      expect(locationApi.baseApiUrl).toBe(baseApiUrl);
+      expect(locationApi.errorTracker).toBeUndefined();
+    });
+  });
 
   describe('sendLocationData', () => {
     it('should successfully send location data to the API', async () => {
@@ -56,17 +78,47 @@ describe('LocationApi', () => {
         }
       );
       expect(result).toEqual(expectedResponse);
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
 
-    it('should handle API errors when sending location data', async () => {
+    it('should track error when sending location data fails', async () => {
       // Arrange
-      const errorMessage = 'Network error';
-      mockHttpClient.post.mockRejectedValue(new Error(errorMessage));
+      const error = new Error('Network error');
+      error.response = {
+        status: 500,
+        data: { message: 'Server error' }
+      };
+      mockHttpClient.post.mockRejectedValue(error);
 
       // Act & Assert
       await expect(locationApi.sendLocationData(mockLocationData, mockToken))
         .rejects
-        .toThrow(errorMessage);
+        .toThrow('Network error');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        error,
+        'testBaseApiUrl/d_api/location_update_app/',
+        expect.objectContaining({
+          method: 'POST',
+          data: {
+            ...mockLocationData,
+            token: '***',
+          },
+          response: error.response.data,
+          status: error.response.status,
+        })
+      );
+    });
+
+    it('should not track errors when no error tracker is provided', async () => {
+      const locationApi = new LocationApi(mockHttpClient, baseApiUrl);
+      const error = new Error('Network error');
+      mockHttpClient.post.mockRejectedValue(error);
+
+      await expect(locationApi.sendLocationData(mockLocationData, mockToken))
+        .rejects
+        .toThrow('Network error');
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
   });
 
@@ -92,17 +144,46 @@ describe('LocationApi', () => {
         }
       );
       expect(result).toEqual(mockHistory);
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
 
-    it('should handle API errors when retrieving location history', async () => {
+    it('should track error when retrieving location history fails', async () => {
       // Arrange
-      const errorMessage = 'Failed to fetch history';
-      mockHttpClient.get.mockRejectedValue(new Error(errorMessage));
+      const error = new Error('Failed to fetch history');
+      error.response = {
+        status: 404,
+        data: { message: 'Not found' }
+      };
+      mockHttpClient.get.mockRejectedValue(error);
 
       // Act & Assert
       await expect(locationApi.getLocationHistory(mockToken))
         .rejects
-        .toThrow(errorMessage);
+        .toThrow('Failed to fetch history');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        error,
+        'testBaseApiUrl/api/location/history',
+        expect.objectContaining({
+          method: 'GET',
+          headers: {
+            Authorization: 'Bearer ***',
+          },
+          response: error.response.data,
+          status: error.response.status,
+        })
+      );
+    });
+
+    it('should not track errors when no error tracker is provided', async () => {
+      const locationApi = new LocationApi(mockHttpClient, baseApiUrl);
+      const error = new Error('Failed to fetch history');
+      mockHttpClient.get.mockRejectedValue(error);
+
+      await expect(locationApi.getLocationHistory(mockToken))
+        .rejects
+        .toThrow('Failed to fetch history');
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
   });
 }); 

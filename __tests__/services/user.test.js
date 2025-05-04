@@ -1,49 +1,93 @@
 import { UserService } from '../../services/user'; // Import the UserService class
+import { trackApiError } from '../../utils/errorTracking';
+
+// Mock dependencies
+const mockUserApi = {
+  getUser: jest.fn(),
+};
+
+const mockAsyncStorageSvc = {
+  getItem: jest.fn(),
+};
+
+// Mock error tracking
+jest.mock('../../utils/errorTracking', () => ({
+  trackApiError: jest.fn(),
+}));
 
 describe('UserService', () => {
-  let userService;
-  const mockAsyncStorageSvc = {
-    getItem: jest.fn(),
-  };
-
-  const mockUserData = { userId: '123', username: 'testUser' };
+  let service;
 
   beforeEach(() => {
-    // Create a new instance of UserService with the mocked AsyncStorageSvc
-    userService = new UserService(null, mockAsyncStorageSvc);
+    jest.clearAllMocks();
+    service = new UserService(mockUserApi, mockAsyncStorageSvc, { trackApiError });
   });
 
-  afterEach(() => {
-    jest.clearAllMocks(); // Clear all mocks after each test
+  describe('constructor', () => {
+    it('should initialize with dependencies', () => {
+      expect(() => new UserService(mockUserApi, mockAsyncStorageSvc)).not.toThrow();
+    });
   });
 
   describe('getUser', () => {
-    it('should retrieve the user from AsyncStorage if it exists', async () => {
-      // Simulate AsyncStorage containing the user data
-      mockAsyncStorageSvc.getItem.mockResolvedValue(JSON.stringify(mockUserData));
+    const mockUser = {
+      id: 1,
+      name: 'Test User',
+      email: 'test@example.com',
+    };
 
-      const result = await userService.getUser();
-
-      expect(result).toEqual(mockUserData);
+    it('should return user from storage when available', async () => {
+      mockAsyncStorageSvc.getItem.mockResolvedValueOnce(JSON.stringify(mockUser));
+      const result = await service.getUser();
+      expect(result).toEqual(mockUser);
       expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('user');
+      expect(mockUserApi.getUser).not.toHaveBeenCalled();
     });
 
-    it('should return null if no user is found in AsyncStorage', async () => {
-      // Simulate no user data in AsyncStorage
-      mockAsyncStorageSvc.getItem.mockResolvedValue(null);
-
-      const result = await userService.getUser();
-
+    it('should return null when no user in storage', async () => {
+      mockAsyncStorageSvc.getItem.mockResolvedValueOnce(null);
+      const result = await service.getUser();
       expect(result).toBeNull();
       expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('user');
+      expect(mockUserApi.getUser).not.toHaveBeenCalled();
     });
 
-    it('should throw an error if AsyncStorage fails', async () => {
-      // Simulate failure in AsyncStorage getItem method
-      mockAsyncStorageSvc.getItem.mockRejectedValue(new Error('AsyncStorage error'));
+    it('should track storage errors with context', async () => {
+      const error = new Error('Storage error');
+      mockAsyncStorageSvc.getItem.mockRejectedValueOnce(error);
 
-      await expect(userService.getUser()).rejects.toThrow('AsyncStorage error');
-      expect(mockAsyncStorageSvc.getItem).toHaveBeenCalledWith('user');
+      await expect(service.getUser()).rejects.toThrow('Storage error');
+      expect(trackApiError).toHaveBeenCalledWith(error, 'UserService/getUser', {
+        method: 'GET',
+        source: 'storage',
+        hasStoredUser: false,
+      });
+    });
+
+    it('should track JSON parse errors with context', async () => {
+      const error = new Error('Invalid JSON');
+      mockAsyncStorageSvc.getItem.mockResolvedValueOnce('invalid-json');
+      jest.spyOn(JSON, 'parse').mockImplementationOnce(() => {
+        throw error;
+      });
+
+      await expect(service.getUser()).rejects.toThrow('Invalid JSON');
+      expect(trackApiError).toHaveBeenCalledWith(error, 'UserService/getUser', {
+        method: 'GET',
+        source: 'storage',
+        hasStoredUser: true,
+      });
+    });
+  });
+
+  describe('error tracking optionality', () => {
+    it('should work without error tracker', async () => {
+      const serviceWithoutTracker = new UserService(mockUserApi, mockAsyncStorageSvc);
+      const error = new Error('Storage error');
+      mockAsyncStorageSvc.getItem.mockRejectedValueOnce(error);
+
+      await expect(serviceWithoutTracker.getUser()).rejects.toThrow('Storage error');
+      expect(trackApiError).not.toHaveBeenCalled();
     });
   });
 });
