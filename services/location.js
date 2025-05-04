@@ -27,6 +27,8 @@ export class LocationService {
         accuracy: Location.Accuracy.High,
         timeInterval: 5000, // Update every 5 seconds
         distanceInterval: 10, // Update every 10 meters
+        mayShowUserSettingsDialog: true,
+        heading: true
       },
       async (location) => {
         const { 
@@ -43,7 +45,7 @@ export class LocationService {
           longitude: parseFloat(longitude),
           accuracy: accuracy ? parseFloat(accuracy) : undefined,
           altitudeAccuracy: altitudeAccuracy ? parseFloat(altitudeAccuracy) : undefined,
-          heading: heading ? parseFloat(heading) : undefined,
+          heading: heading !== null && heading !== undefined ? parseFloat(heading) : 0,
           locationTimeStamp: new Date().toISOString()
         };
 

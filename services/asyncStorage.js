@@ -11,7 +11,11 @@ export class AsyncStorageService {
 
   async setItem(key, value) {
       try {
-          await this.asyncStorage.setItem(key, JSON.stringify(value));
+          if (key === 'authToken') {
+              await this.asyncStorage.setItem(key, value);
+          } else {
+              await this.asyncStorage.setItem(key, JSON.stringify(value));
+          }
       } catch (error) {
           console.error('Error saving data to AsyncStorage', error);
           throw error;
@@ -21,7 +25,12 @@ export class AsyncStorageService {
   async getItem(key) {
       try {
           const value = await this.asyncStorage.getItem(key);
-          return value ? JSON.parse(value) : null;
+          if (!value) return null;
+          
+          if (key === 'authToken') {
+              return value;
+          }
+          return JSON.parse(value);
       } catch (error) {
           console.error('Error fetching data from AsyncStorage', error);
           throw error;
@@ -40,7 +49,6 @@ export class AsyncStorageService {
    async clearAllStorage() {
     try {
       await this.asyncStorage.clear();
-      console.log('AsyncStorage cleared successfully!');
     } catch (error) {
       console.error('Error clearing AsyncStorage:', error);
       throw error;

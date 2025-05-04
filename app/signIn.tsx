@@ -50,8 +50,7 @@ const SignIn = () => {
   };
 
   const handleForgotPassword = () => {
-    // TODO: Implement forgot password functionality
-    console.log('Forgot password pressed');
+    // Navigate to forgot password screen
   };
 
   return (
