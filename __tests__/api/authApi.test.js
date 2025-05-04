@@ -6,17 +6,38 @@ const mockHttpClient = {
   get: jest.fn(),
 };
 
+// Mock the error tracker
+const mockErrorTracker = {
+  trackApiError: jest.fn(),
+};
+
 describe('AuthApi', () => {
   let authApi;
   const baseApiUrl = 'http://api.example.com';
 
   beforeEach(() => {
-    // Create an instance of AuthApi with the mocked httpClient
-    authApi = new AuthApi(mockHttpClient, baseApiUrl);
+    // Create an instance of AuthApi with the mocked httpClient and error tracker
+    authApi = new AuthApi(mockHttpClient, baseApiUrl, mockErrorTracker);
   });
 
   afterEach(() => {
     jest.clearAllMocks(); // Clear mocks after each test
+  });
+
+  describe('constructor', () => {
+    it('should initialize with http client, base url and error tracker', () => {
+      const authApi = new AuthApi(mockHttpClient, baseApiUrl, mockErrorTracker);
+      expect(authApi.httpClient).toBe(mockHttpClient);
+      expect(authApi.baseApiUrl).toBe(baseApiUrl);
+      expect(authApi.errorTracker).toBe(mockErrorTracker);
+    });
+
+    it('should work without error tracker', () => {
+      const authApi = new AuthApi(mockHttpClient, baseApiUrl);
+      expect(authApi.httpClient).toBe(mockHttpClient);
+      expect(authApi.baseApiUrl).toBe(baseApiUrl);
+      expect(authApi.errorTracker).toBeUndefined();
+    });
   });
 
   describe('login', () => {
@@ -48,7 +69,7 @@ describe('AuthApi', () => {
       );
     });
 
-    it('should throw an error if no auth token is returned from login', async () => {
+    it('should track error when no auth token is returned from login', async () => {
       // Define the mock response for a failed login (no token)
       const mockResponse = {
         data: { userId: 1, username: 'testUser' },
@@ -64,12 +85,22 @@ describe('AuthApi', () => {
           profilePassword: 'password123',
         })
       ).rejects.toThrow('No auth token returned from login');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        expect.any(Error),
+        `${baseApiUrl}/api/user_profile/login/`,
+        expect.objectContaining({
+          method: 'POST',
+          data: { profileEmail: '***' },
+        })
+      );
     });
 
-    it('should throw an error if login fails with an API error message', async () => {
+    it('should track error when login fails with an API error message', async () => {
       // Define the mock error response
       const mockErrorResponse = {
         response: {
+          status: 401,
           data: {
             message: 'Invalid credentials',
           },
@@ -85,6 +116,37 @@ describe('AuthApi', () => {
           profilePassword: 'wrongPassword',
         })
       ).rejects.toThrow('Invalid credentials');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        mockErrorResponse,
+        `${baseApiUrl}/api/user_profile/login/`,
+        expect.objectContaining({
+          method: 'POST',
+          data: { profileEmail: '***' },
+          response: mockErrorResponse.response.data,
+          status: mockErrorResponse.response.status,
+        })
+      );
+    });
+
+    it('should not track errors when no error tracker is provided', async () => {
+      const authApi = new AuthApi(mockHttpClient, baseApiUrl);
+      const mockErrorResponse = {
+        response: {
+          data: {
+            message: 'Invalid credentials',
+          },
+        },
+      };
+      mockHttpClient.post.mockRejectedValue(mockErrorResponse);
+
+      await expect(
+        authApi.login({
+          profileEmail: 'test@example.com',
+          profilePassword: 'wrongPassword',
+        })
+      ).rejects.toThrow('Invalid credentials');
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
   });
 
@@ -111,10 +173,11 @@ describe('AuthApi', () => {
       expect(result).toBe(false);
     });
 
-    it('should throw an error if token validation fails', async () => {
+    it('should track error when token validation fails', async () => {
       // Define the mock error response
       const mockErrorResponse = {
         response: {
+          status: 500,
           data: {
             message: 'Token validation failed',
           },
@@ -125,10 +188,43 @@ describe('AuthApi', () => {
       mockHttpClient.get.mockRejectedValue(mockErrorResponse);
 
       await expect(authApi.validateToken('invalidToken')).rejects.toThrow('Token validation failed');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        mockErrorResponse,
+        `${baseApiUrl}/auth/validate`,
+        expect.objectContaining({
+          method: 'GET',
+          response: mockErrorResponse.response.data,
+          status: mockErrorResponse.response.status,
+        })
+      );
     });
 
-    it('should throw an error if no token is provided', async () => {
+    it('should track error when no token is provided', async () => {
       await expect(authApi.validateToken()).rejects.toThrow('No token provided');
+
+      expect(mockErrorTracker.trackApiError).toHaveBeenCalledWith(
+        expect.any(Error),
+        `${baseApiUrl}/auth/validate`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should not track errors when no error tracker is provided', async () => {
+      const authApi = new AuthApi(mockHttpClient, baseApiUrl);
+      const mockErrorResponse = {
+        response: {
+          data: {
+            message: 'Token validation failed',
+          },
+        },
+      };
+      mockHttpClient.get.mockRejectedValue(mockErrorResponse);
+
+      await expect(authApi.validateToken('invalidToken')).rejects.toThrow('Token validation failed');
+      expect(mockErrorTracker.trackApiError).not.toHaveBeenCalled();
     });
   });
 });
