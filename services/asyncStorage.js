@@ -1,5 +1,5 @@
 export class AsyncStorageService {
-  constructor(asyncStorage) {
+  constructor(asyncStorage, errorTracker) {
       if (!asyncStorage || typeof asyncStorage.setItem !== 'function' || 
           typeof asyncStorage.getItem !== 'function' || 
           typeof asyncStorage.removeItem !== 'function') {
@@ -7,6 +7,7 @@ export class AsyncStorageService {
       }
 
       this.asyncStorage = asyncStorage;
+      this.errorTracker = errorTracker;
   }
 
   async setItem(key, value) {
@@ -17,7 +18,13 @@ export class AsyncStorageService {
               await this.asyncStorage.setItem(key, JSON.stringify(value));
           }
       } catch (error) {
-          console.error('Error saving data to AsyncStorage', error);
+          if (this.errorTracker) {
+              await this.errorTracker.trackApiError(error, 'AsyncStorage/setItem', {
+                  method: 'SET',
+                  key,
+                  value: key === 'authToken' ? '***' : value, // Mask sensitive data
+              });
+          }
           throw error;
       }
   }
@@ -32,7 +39,12 @@ export class AsyncStorageService {
           }
           return JSON.parse(value);
       } catch (error) {
-          console.error('Error fetching data from AsyncStorage', error);
+          if (this.errorTracker) {
+              await this.errorTracker.trackApiError(error, 'AsyncStorage/getItem', {
+                  method: 'GET',
+                  key,
+              });
+          }
           throw error;
       }
   }
@@ -41,17 +53,26 @@ export class AsyncStorageService {
       try {
           await this.asyncStorage.removeItem(key);
       } catch (error) {
-          console.error('Error removing data from AsyncStorage', error);
+          if (this.errorTracker) {
+              await this.errorTracker.trackApiError(error, 'AsyncStorage/removeItem', {
+                  method: 'REMOVE',
+                  key,
+              });
+          }
           throw error;
       }
   }
 
-   async clearAllStorage() {
-    try {
-      await this.asyncStorage.clear();
-    } catch (error) {
-      console.error('Error clearing AsyncStorage:', error);
-      throw error;
-    }
-  };
+  async clearAllStorage() {
+      try {
+          await this.asyncStorage.clear();
+      } catch (error) {
+          if (this.errorTracker) {
+              await this.errorTracker.trackApiError(error, 'AsyncStorage/clearAll', {
+                  method: 'CLEAR',
+              });
+          }
+          throw error;
+      }
+  }
 }

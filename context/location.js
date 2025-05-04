@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { BASE_API_URL } from '../util/const';
 import NetInfo from '@react-native-community/netinfo';
+import { trackApiError, trackUserError } from '../utils/errorTracking';
 
 const LocationContext = createContext();
 
@@ -21,30 +22,45 @@ export const LocationProvider = ({ children }) => {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [locationHistory, setLocationHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
-  // Create instances of required services
-  const locationApi = new LocationApi(axios, BASE_API_URL);
-  const authService = new AuthService(locationApi, AsyncStorage);
-  const locationService = new LocationService(locationApi, authService);
+  // Create instances of required services with error tracking
+  const locationApi = new LocationApi(axios, BASE_API_URL, { trackApiError });
+  const authService = new AuthService(locationApi, AsyncStorage, { trackApiError });
+  const locationService = new LocationService(locationApi, authService, { trackApiError });
 
   // Monitor network status
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
-      setIsOnline(state.isConnected && state.isInternetReachable);
+      const newOnlineState = state.isConnected && state.isInternetReachable;
+      if (newOnlineState !== isOnline) {
+        if (!newOnlineState) {
+          trackUserError(
+            new Error('Network connection lost'),
+            'network_status_change',
+            'LocationProvider'
+          );
+        }
+        setIsOnline(newOnlineState);
+      }
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [isOnline]);
 
   useEffect(() => {
     return () => {
       if (isTracking) {
-        locationService.stopTracking();
+        try {
+          locationService.stopTracking();
+        } catch (err) {
+          trackApiError(err, 'LocationProvider/cleanup', {
+            isTracking,
+          });
+        }
       }
     };
   }, [isTracking]);
@@ -55,11 +71,13 @@ export const LocationProvider = ({ children }) => {
       setIsLoading(true);
       await locationService.startTracking((newLocation) => {
         setLocation(newLocation);
-        setLocationHistory((prev) => [newLocation, ...prev]);
       });
       setIsTracking(true);
     } catch (err) {
-      console.error('Error starting tracking:', err);
+      await trackApiError(err, 'LocationProvider/startTracking', {
+        isOnline,
+        previousLocation: !!location,
+      });
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -73,6 +91,10 @@ export const LocationProvider = ({ children }) => {
       await locationService.stopTracking();
       setIsTracking(false);
     } catch (err) {
+      await trackApiError(err, 'LocationProvider/stopTracking', {
+        isOnline,
+        isTracking,
+      });
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -83,7 +105,6 @@ export const LocationProvider = ({ children }) => {
     location,
     error,
     isTracking,
-    locationHistory,
     isLoading,
     isOnline,
     startTracking,

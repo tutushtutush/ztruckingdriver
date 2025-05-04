@@ -1,7 +1,8 @@
 export class AuthService {
-  constructor(authApi, asyncStorageSvc) {
+  constructor(authApi, asyncStorageSvc, errorTracker) {
     this.authApi = authApi;
     this.asyncStorageSvc = asyncStorageSvc;
+    this.errorTracker = errorTracker;
   }
 
   // Get token from AsyncStorage
@@ -9,7 +10,12 @@ export class AuthService {
     try {
       return await this.asyncStorageSvc.getItem('authToken');
     } catch (error) {
-      console.error('Error getting token', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/getToken', {
+          method: 'GET',
+          key: 'authToken',
+        });
+      }
       throw error;
     }
   }
@@ -19,7 +25,13 @@ export class AuthService {
     try {
       await this.asyncStorageSvc.setItem('rememberedUsername', username);
     } catch (error) {
-      console.error('Error setting remembered username', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/setRememberedUsername', {
+          method: 'SET',
+          key: 'rememberedUsername',
+          value: username,
+        });
+      }
       throw error;
     }
   }
@@ -29,7 +41,12 @@ export class AuthService {
     try {
       return await this.asyncStorageSvc.getItem('rememberedUsername');
     } catch (error) {
-      console.error('Error getting remembered username', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/getRememberedUsername', {
+          method: 'GET',
+          key: 'rememberedUsername',
+        });
+      }
       throw error;
     }
   }
@@ -39,19 +56,30 @@ export class AuthService {
     try {
       await this.asyncStorageSvc.removeItem('rememberedUsername');
     } catch (error) {
-      console.error('Error removing remembered username', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/removeRememberedUsername', {
+          method: 'REMOVE',
+          key: 'rememberedUsername',
+        });
+      }
       throw error;
     }
   }
 
   // Validate the token
   async isTokenValid() {
+    let token = null;
     try {
-      const token = await this.getToken();
+      token = await this.getToken();
       if (!token) return false;
       return await this.authApi.validateToken(token);
     } catch (error) {
-      console.error('Error validating token', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/isTokenValid', {
+          method: 'VALIDATE',
+          hasToken: !!token,
+        });
+      }
       return false;
     }
   }
@@ -68,7 +96,13 @@ export class AuthService {
 
       return true;
     } catch (error) {
-      console.error('Error during sign-in', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/signIn', {
+          method: 'LOGIN',
+          hasEmail: !!profileEmail,
+          hasPassword: !!profilePassword,
+        });
+      }
       throw error;
     }
   }
@@ -79,7 +113,12 @@ export class AuthService {
       await this.asyncStorageSvc.removeItem('authToken');
       await this.asyncStorageSvc.removeItem('user');
     } catch (error) {
-      console.error('Error during sign-out', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/signOut', {
+          method: 'LOGOUT',
+        });
+      }
+      throw error;
     }
   }
 
@@ -88,7 +127,12 @@ export class AuthService {
     try {
       await this.asyncStorageSvc.clearAllStorage();
     } catch (error) {
-      console.error('Error clearing storage', error);
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'AuthService/clearAllStorage', {
+          method: 'CLEAR',
+        });
+      }
+      throw error;
     }
   }
 }

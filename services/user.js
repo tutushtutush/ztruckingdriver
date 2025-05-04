@@ -1,23 +1,43 @@
+import { UserApi } from '../api/user';
+import { AsyncStorageService } from './asyncStorage';
+
 export class UserService {
-  constructor(userApi, asyncStorageSvc) {
-    this.userApi = userApi;
-    this.asyncStorageSvc = asyncStorageSvc;
+  constructor(userApi, asyncStorageSvc, errorTracker) {
+    this.userApi = userApi || new UserApi();
+    this.asyncStorageSvc = asyncStorageSvc || new AsyncStorageService();
+    this.errorTracker = errorTracker;
   }
 
   async getUser() {
     try {
-      // First, attempt to get the user from AsyncStorage
-      const storedUser = await this.asyncStorageSvc.getItem(`user`);
+      // Try to get user from storage first
+      const storedUser = await this.asyncStorageSvc.getItem('user');
+      
       if (storedUser) {
-        return JSON.parse(storedUser); // Return the user data from AsyncStorage if found
+        try {
+          return JSON.parse(storedUser);
+        } catch (error) {
+          if (this.errorTracker) {
+            this.errorTracker.trackApiError(error, 'UserService/getUser', {
+              method: 'GET',
+              source: 'storage',
+              hasStoredUser: true, // We have stored data, but it's invalid
+            });
+          }
+          throw error;
+        }
       }
-
-      // If no user data is found in AsyncStorage, fetch from API
-      return null
-
+      
+      return null;
     } catch (error) {
-      console.error('Error getting user data', error);
-      throw error; // Rethrow error after logging it
+      if (this.errorTracker) {
+        this.errorTracker.trackApiError(error, 'UserService/getUser', {
+          method: 'GET',
+          source: 'storage',
+          hasStoredUser: false, // No stored data or storage error
+        });
+      }
+      throw error;
     }
   }
 }
