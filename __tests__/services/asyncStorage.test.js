@@ -24,6 +24,18 @@ describe('AsyncStorageService', () => {
   test('should store data using setItem', async () => {
     // Arrange
     const key = 'authToken';
+    const value = 'mockToken';
+
+    // Act
+    await asyncStorageService.setItem(key, value);
+
+    // Assert
+    expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(key, value);
+  });
+
+  test('should store JSON data using setItem', async () => {
+    // Arrange
+    const key = 'userData';
     const value = { token: 'mockToken' };
 
     // Act
@@ -36,6 +48,20 @@ describe('AsyncStorageService', () => {
   test('should fetch data using getItem', async () => {
     // Arrange
     const key = 'authToken';
+    const value = 'mockToken';
+    mockAsyncStorage.getItem.mockResolvedValue(value);
+
+    // Act
+    const result = await asyncStorageService.getItem(key);
+
+    // Assert
+    expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(key);
+    expect(result).toBe(value);
+  });
+
+  test('should fetch JSON data using getItem', async () => {
+    // Arrange
+    const key = 'userData';
     const value = { token: 'mockToken' };
     mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(value));
 
@@ -82,7 +108,7 @@ describe('AsyncStorageService', () => {
   test('should throw error if setItem fails', async () => {
     // Arrange
     const key = 'authToken';
-    const value = { token: 'mockToken' };
+    const value = 'mockToken';
     mockAsyncStorage.setItem.mockRejectedValue(new Error('Failed to save'));
 
     // Act & Assert

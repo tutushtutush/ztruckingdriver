@@ -28,23 +28,34 @@ describe('LocationApi', () => {
   describe('sendLocationData', () => {
     it('should successfully send location data to the API', async () => {
       // Arrange
-      mockHttpClient.post.mockResolvedValue({ data: { success: true } });
+      const locationData = {
+        latitude: 40.7128,
+        longitude: -74.0060,
+        accuracy: 10,
+        altitudeAccuracy: 5,
+        heading: 180,
+        locationTimeStamp: '2024-01-01T00:00:00.000Z'
+      };
+      const token = 'test-token';
+      const expectedResponse = { success: true };
+
+      mockHttpClient.post.mockResolvedValue({ data: expectedResponse });
 
       // Act
-      const result = await locationApi.sendLocationData(mockLocationData, mockToken);
+      const result = await locationApi.sendLocationData(locationData, token);
 
       // Assert
       expect(mockHttpClient.post).toHaveBeenCalledWith(
-        `${baseApiUrl}/api/location/track`,
-        mockLocationData,
+        'testBaseApiUrl/d_api/location_update_app/',
+        locationData,
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mockToken}`
+            'Authorization': `Token ${token}`
           }
         }
       );
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should handle API errors when sending location data', async () => {

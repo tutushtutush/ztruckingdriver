@@ -79,12 +79,22 @@ describe('LocationService', () => {
     });
 
     it('should start watching position with correct options', async () => {
+      // Arrange
+      const mockCallback = jest.fn();
+      Location.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      Location.watchPositionAsync.mockResolvedValue('watch-id');
+
+      // Act
       await locationService.startTracking(mockCallback);
+
+      // Assert
       expect(Location.watchPositionAsync).toHaveBeenCalledWith(
         {
           accuracy: Location.Accuracy.High,
           timeInterval: 5000,
           distanceInterval: 10,
+          mayShowUserSettingsDialog: true,
+          heading: true
         },
         expect.any(Function)
       );
