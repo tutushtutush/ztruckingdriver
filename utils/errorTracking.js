@@ -15,7 +15,8 @@ let userContext = null;
 // Initialize the error tracking utility
 export const initializeErrorTracking = (httpClient, baseApiUrl) => {
   errorApi = new ErrorTrackingApi(httpClient, baseApiUrl);
-  startRetryTimer();
+  // Remote API is not ready yet, so we'll skip starting the retry timer
+  // startRetryTimer();
 };
 
 // Start the retry timer
@@ -100,13 +101,13 @@ export const trackError = async (error, context = {}) => {
       retryCount: 0,
     };
 
-    const result = await errorApi.logError(errorData);
-
-    if (!result.success) {
-      const failedErrors = await getFailedErrors();
-      failedErrors.push(errorData);
-      await saveFailedErrors(failedErrors);
-    }
+    // Remote API is not ready yet, so we'll skip remote logging
+    // const result = await errorApi.logError(errorData);
+    // if (!result.success) {
+    //   const failedErrors = await getFailedErrors();
+    //   failedErrors.push(errorData);
+    //   await saveFailedErrors(failedErrors);
+    // }
 
     if (__DEV__) {
       console.log('Error tracked:', {
