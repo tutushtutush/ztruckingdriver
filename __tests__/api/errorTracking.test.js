@@ -26,76 +26,21 @@ describe('ErrorTrackingApi', () => {
       },
     };
 
-    it('should successfully log error and return success flag', async () => {
-      // Arrange
-      mockHttpClient.post.mockResolvedValue({ data: {} });
-
+    it('should return success flag since remote API is not ready', async () => {
       // Act
       const result = await errorTrackingApi.logError(mockErrorData);
 
       // Assert
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        `${baseApiUrl}/api/error/log`,
-        mockErrorData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
 
-    it('should handle API error and return failure flag', async () => {
-      // Arrange
-      mockHttpClient.post.mockRejectedValue(new Error('API Error'));
-
-      // Act
-      const result = await errorTrackingApi.logError(mockErrorData);
-
-      // Assert
-      expect(result).toEqual({ success: false });
-    });
-
-    it('should handle network error and return failure flag', async () => {
-      // Arrange
-      mockHttpClient.post.mockRejectedValue({ message: 'Network Error' });
-
-      // Act
-      const result = await errorTrackingApi.logError(mockErrorData);
-
-      // Assert
-      expect(result).toEqual({ success: false });
-    });
-
-    it('should handle malformed response and return failure flag', async () => {
-      // Arrange
-      mockHttpClient.post.mockResolvedValue(null);
-
-      // Act
-      const result = await errorTrackingApi.logError(mockErrorData);
-
-      // Assert
-      expect(result).toEqual({ success: false });
-    });
-
     it('should handle empty error data', async () => {
-      // Arrange
-      mockHttpClient.post.mockResolvedValue({ data: {} });
-
       // Act
       const result = await errorTrackingApi.logError({});
 
       // Assert
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        `${baseApiUrl}/api/error/log`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      expect(mockHttpClient.post).not.toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
   });
