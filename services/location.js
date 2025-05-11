@@ -25,6 +25,33 @@ export class LocationService {
     }
   }
 
+  async getAddressFromCoordinates(latitude, longitude) {
+    try {
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude
+      });
+      
+      if (address) {
+        const parts = [];
+        if (address.street) parts.push(address.street);
+        if (address.city) parts.push(address.city);
+        if (address.region) parts.push(address.region);
+        if (address.country) parts.push(address.country);
+        return parts.join(', ');
+      }
+      return null;
+    } catch (error) {
+      if (this.errorTracker) {
+        await this.errorTracker.trackApiError(error, 'LocationService/getAddressFromCoordinates', {
+          method: 'REVERSE_GEOCODE',
+          coordinates: { latitude, longitude }
+        });
+      }
+      return null;
+    }
+  }
+
   async startTracking(callback) {
     try {
       const hasPermission = await this.requestPermissions();
@@ -51,6 +78,9 @@ export class LocationService {
             heading 
           } = location.coords;
 
+          // Get address information
+          const formattedAddress = await this.getAddressFromCoordinates(latitude, longitude);
+
           // Format location data according to schema
           const locationData = {
             latitude: parseFloat(latitude),
@@ -58,7 +88,8 @@ export class LocationService {
             accuracy: accuracy ? parseFloat(accuracy) : undefined,
             altitudeAccuracy: altitudeAccuracy ? parseFloat(altitudeAccuracy) : undefined,
             heading: heading !== null && heading !== undefined ? parseFloat(heading) : 0,
-            locationTimeStamp: new Date().toISOString()
+            locationTimeStamp: new Date().toISOString(),
+            formattedAddress
           };
 
           // Update callback with latest location data
