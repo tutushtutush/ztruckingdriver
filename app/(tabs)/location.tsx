@@ -10,10 +10,23 @@ interface LocationData {
   formattedAddress?: string;
 }
 
-const formatDate = (timestamp: string | undefined) => {
-  if (!timestamp) return 'No timestamp available';
-  const date = new Date(timestamp);
-  return date.toLocaleString();
+// Function to convert decimal degrees to degrees, minutes, seconds format
+const decimalToDMS = (decimal: number, isLatitude: boolean): string => {
+  const absolute = Math.abs(decimal);
+  const degrees = Math.floor(absolute);
+  const minutesNotTruncated = (absolute - degrees) * 60;
+  const minutes = Math.floor(minutesNotTruncated);
+  const seconds = ((minutesNotTruncated - minutes) * 60).toFixed(2);
+
+  const direction = isLatitude
+    ? decimal >= 0 ? 'N' : 'S'
+    : decimal >= 0 ? 'E' : 'W';
+
+  return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleString();
 };
 
 const LocationScreen = () => {
@@ -54,12 +67,15 @@ const LocationScreen = () => {
         {location && (
           <View className="bg-dark-100 p-4 rounded-lg mb-6">
             <Text className="text-lg font-semibold text-white mb-2">Current Location</Text>
-            <Text className="text-light-200">Latitude: {location.latitude.toFixed(6)}</Text>
-            <Text className="text-light-200">Longitude: {location.longitude.toFixed(6)}</Text>
+            <Text className="text-light-200">Latitude: {decimalToDMS(location.latitude, true)}</Text>
+            <Text className="text-light-200">Longitude: {decimalToDMS(location.longitude, false)}</Text>
             {location.formattedAddress && (
-              <Text className="text-light-200">Address: {location.formattedAddress}</Text>
+              <View className="mt-2">
+                <Text className="text-light-200 font-semibold">Location:</Text>
+                <Text className="text-light-200 ml-2">{location.formattedAddress}</Text>
+              </View>
             )}
-            <Text className="text-light-200">Time: {formatDate(location.locationTimeStamp)}</Text>
+            <Text className="text-light-200 mt-2">Time: {formatDate(location.locationTimeStamp)}</Text>
           </View>
         )}
       </View>

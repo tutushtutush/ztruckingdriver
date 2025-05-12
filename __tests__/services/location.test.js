@@ -10,6 +10,7 @@ jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(),
   watchPositionAsync: jest.fn(),
   removeWatchAsync: jest.fn(),
+  reverseGeocodeAsync: jest.fn(),
   Accuracy: {
     High: 'high',
   },
@@ -136,6 +137,14 @@ describe('LocationService', () => {
         }
       };
 
+      // Mock reverse geocoding
+      Location.reverseGeocodeAsync.mockResolvedValue([{
+        street: '123 Main St',
+        city: 'New York',
+        region: 'NY',
+        country: 'United States'
+      }]);
+
       // Mock watchPositionAsync to capture the callback
       let capturedCallback;
       Location.watchPositionAsync.mockImplementation((options, callback) => {
@@ -155,7 +164,8 @@ describe('LocationService', () => {
         accuracy: 10,
         altitudeAccuracy: 5,
         heading: 180,
-        locationTimeStamp: expect.any(String)
+        locationTimeStamp: expect.any(String),
+        formattedAddress: '123 Main St, New York, NY, United States'
       });
     });
 
@@ -172,6 +182,14 @@ describe('LocationService', () => {
         }
       };
 
+      // Mock reverse geocoding
+      Location.reverseGeocodeAsync.mockResolvedValue([{
+        street: '123 Main St',
+        city: 'New York',
+        region: 'NY',
+        country: 'United States'
+      }]);
+
       // Mock watchPositionAsync to capture the callback
       let capturedCallback;
       Location.watchPositionAsync.mockImplementation((options, callback) => {
@@ -185,13 +203,14 @@ describe('LocationService', () => {
       await capturedCallback(mockLocation);
 
       expect(mockLocationApi.sendLocationData).toHaveBeenCalledWith(
-          expect.objectContaining({
-        latitude: 40.7128,
-        longitude: -74.0060,
+        expect.objectContaining({
+          latitude: 40.7128,
+          longitude: -74.0060,
           accuracy: 10,
           altitudeAccuracy: 5,
           heading: 180,
-          locationTimeStamp: expect.any(String)
+          locationTimeStamp: expect.any(String),
+          formattedAddress: '123 Main St, New York, NY, United States'
         }),
         'test-token'
       );
